@@ -192,3 +192,54 @@ nothing. (b) Keys beyond the declared fields of a label_object item are
 ignored; 4.5 says each item holds every field with its type, while the
 schema it sends has additionalProperties false. (c) File flags are taken
 only at level work x list x list; 5 does not say.
+
+## 2026-11-02 18:39  Replay of the earlier runs from their caches
+Done: replayed, with `run(..., replay=True)`, the earlier tables of
+wos_paper_sample and of the open_alex_adt_gate recall sample, each from
+its own caches read in place (`[passes.cache_dirs]`) and from the
+documents file its run.json names, in its order. Slices of the first 200
+works first, then every table in full. Workflows, outputs and comparison
+scripts outside the repository. Compared by 8.3 on (id, code): every
+compared column (label, score, p_* to 1e-12, source_score as
+pass1_score, relevant, flags, pos/neg labels, retried, tokens,
+parse_failure, model, prompt_id, arm, batch_id).
+
+| table | earlier rows | replayed | identical | differing | misses |
+|---|---|---|---|---|---|
+| WS sdg_pass1 qwen3 / gemma | 2,134,486 each | same | all | 0 | 0 |
+| WS sdg_pass2 qwen3 | 386,784 | 386,784 | all | 0 | 0 |
+| WS sdg_pass2 gemma | 426,345 | 426,345 | all | 0 | 0 |
+| WS adt_pass1 gemma / qwen3 | 753,348 each | same | all | 0 | 0 |
+| WS adt_pass2 gemma | 163,255 | 163,255 | all | 0 | 0 |
+| WS adt_pass2 qwen3 | 130,115 | 130,115 | all | 0 | 0 |
+| WS impact_p3_2 coder / gemma | 307,231 each | same | all | 0 | 0 |
+| WS paper_adt coder | 753,348 | 753,348 | all | 0 | 0 |
+| WS paper_sdg coder | 2,134,486 | 2,134,486 | all | 0 | 0 |
+| OA recall sdg_pass1 qwen3 / gemma | 5,100,017 each | same | all | 0 | 0 |
+| OA recall sdg_pass2 qwen3 | 526,799 | 526,799 | all | 0 | 0 |
+| OA recall sdg_pass2 gemma | 587,207 | 587,207 | all | 0 | 0 |
+| OA recall adt_pass1 qwen3 / gemma | 1,800,006 each | same | all | 0 | 0 |
+| OA recall adt_pass2 qwen3 | 39,941 | 39,941 | all | 0 | 0 |
+| OA recall adt_pass2 gemma | 61,949 | 61,949 | all | 0 | 0 |
+
+No key only on one side, no repeated key, no cache miss: every call was
+read from the cache (fresh_calls 0 in every manifest). The impact pass
+read 53 budget retries for coder and 4,184 rows with a retry for gemma
+from the cache under budget_rule "tokens". texts_sha256 and
+units_sha256 of every run.json equal the documents_sha256 and
+units_sha256 of the earlier run.json (WS documents 0416bcea95aa, OA
+recall d57e01c87916), so texts, order and units are those of the
+earlier runs. Full replay times: WS about 16 min, OA about 13 min.
+Not replayed: WS paper_impact (gemma's paper label tables are not on
+disk, and the cross reads both models). divergence-validation labels_p2
+(gemma, mistral-small) and labels_p3: the call caches
+data/cache/llm_p2 and llm_p3 are not on this machine (empty data/cache;
+they are on the home server's DVC remote) and were not fetched. Counts:
+labels_p2 51,044 rows per model (gemma, mistral-small, gpt-oss; the
+51,044 gpt-oss rows are the ones D017 says do not replay); labels_p3
+51,044 per model (coder, gemma, gpt-oss); 25,522 triples, 20,823 works,
+one text per work, no null title or abstract, so null_text does not
+matter there.
+Tests added: none.
+Open / unsure: the divergence-validation replay waits on its caches
+being copied to this machine.
