@@ -164,3 +164,12 @@ two files of one question, an unknown `[readout]` key, a source pass with
 and a `limit` below 1 are refused; extra keys in a `json_object` item are
 ignored; flags from a file are taken only at level `work x list x list`.
 None changes what a pass returns.
+
+## D021  Windows is not tested (2026-11-02, Kevin)
+
+The tests compare letter probabilities bit for bit with tables made on Linux.
+On Windows, `math.exp` comes from another C library and can differ in the
+last binary digit, so three replay tests fail there while every value agrees
+to many decimals. Windows is removed from the test matrix rather than given a
+tolerance. The package is pure Python and still installs on Windows; nothing
+checks it there.
