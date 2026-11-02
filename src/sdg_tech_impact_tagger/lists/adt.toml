@@ -1,0 +1,40 @@
+[list]
+id = "adt"
+name = "Advanced digital technologies"
+source = "Names from the first lines of adt_descriptions_v3.md; impact names as in wos_paper_sample params.yaml"
+
+[[labels]]
+id = "AI"
+json_key = "AI"
+name = "Artificial intelligence and big data analytics"
+name_impact = "artificial intelligence"
+
+[[labels]]
+id = "IOT"
+json_key = "IOT"
+name = "Internet of Things"
+name_impact = "the Internet of Things"
+
+[[labels]]
+id = "COMPUTING_INFRASTRUCTURE"
+json_key = "COMPUTING_INFRASTRUCTURE"
+name = "Computing infrastructure"
+name_impact = "computing infrastructure"
+
+[[labels]]
+id = "BLOCKCHAIN"
+json_key = "BLOCKCHAIN"
+name = "Blockchain"
+name_impact = "blockchain"
+
+[[labels]]
+id = "ROBOTICS"
+json_key = "ROBOTICS"
+name = "Robotics"
+name_impact = "robotics"
+
+[[labels]]
+id = "ADDITIVE_MANUFACTURING"
+json_key = "ADDITIVE_MANUFACTURING"
+name = "Additive manufacturing"
+name_impact = "additive manufacturing"

@@ -1,0 +1,33 @@
+[question]
+name = "protocol_v1/sdg_pass1"
+level = "work"
+readout = "score_json"
+status = "record"
+prompt_id = "sdgp1-ca9ecbb1733d"
+
+[lists]
+a = "sdg"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["sdg_pass1.md"]
+system = "SYSTEM_SCORE17"
+user = "USER_SCORE17"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+
+[readout]
+schema_name = "sdg_scores"
+
+[budget]
+max_tokens = 1024
+
+[id]
+prefix = "sdgp1"
+blocks = ["SYSTEM_LIST", "USER_LIST", "SYSTEM_SCORE17", "USER_SCORE17", "SYSTEM_BINARY17", "USER_BINARY17"]

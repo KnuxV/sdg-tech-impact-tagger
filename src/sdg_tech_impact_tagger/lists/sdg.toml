@@ -1,0 +1,140 @@
+[list]
+id = "sdg"
+name = "Sustainable development goals"
+source = "Goal titles of the United Nations (A/RES/70/1), as named by open_alex_adt_gate sdg_pass1.SDG_TITLES; impact names as in wos_paper_sample params.yaml"
+
+[[labels]]
+id = "SDG-01"
+json_key = "SDG1"
+name = "No Poverty"
+number = "01"
+name_short = "SDG 1, No Poverty"
+name_impact = "SDG 1, no poverty"
+
+[[labels]]
+id = "SDG-02"
+json_key = "SDG2"
+name = "Zero Hunger"
+number = "02"
+name_short = "SDG 2, Zero Hunger"
+name_impact = "SDG 2, zero hunger"
+
+[[labels]]
+id = "SDG-03"
+json_key = "SDG3"
+name = "Good Health and Well-being"
+number = "03"
+name_short = "SDG 3, Good Health and Well-being"
+name_impact = "SDG 3, good health and well-being"
+
+[[labels]]
+id = "SDG-04"
+json_key = "SDG4"
+name = "Quality Education"
+number = "04"
+name_short = "SDG 4, Quality Education"
+name_impact = "SDG 4, quality education"
+
+[[labels]]
+id = "SDG-05"
+json_key = "SDG5"
+name = "Gender Equality"
+number = "05"
+name_short = "SDG 5, Gender Equality"
+name_impact = "SDG 5, gender equality"
+
+[[labels]]
+id = "SDG-06"
+json_key = "SDG6"
+name = "Clean Water and Sanitation"
+number = "06"
+name_short = "SDG 6, Clean Water and Sanitation"
+name_impact = "SDG 6, clean water and sanitation"
+
+[[labels]]
+id = "SDG-07"
+json_key = "SDG7"
+name = "Affordable and Clean Energy"
+number = "07"
+name_short = "SDG 7, Affordable and Clean Energy"
+name_impact = "SDG 7, affordable and clean energy"
+
+[[labels]]
+id = "SDG-08"
+json_key = "SDG8"
+name = "Decent Work and Economic Growth"
+number = "08"
+name_short = "SDG 8, Decent Work and Economic Growth"
+name_impact = "SDG 8, decent work and economic growth"
+
+[[labels]]
+id = "SDG-09"
+json_key = "SDG9"
+name = "Industry, Innovation and Infrastructure"
+number = "09"
+name_short = "SDG 9, Industry, Innovation and Infrastructure"
+name_impact = "SDG 9, industry, innovation and infrastructure"
+
+[[labels]]
+id = "SDG-10"
+json_key = "SDG10"
+name = "Reduced Inequalities"
+number = "10"
+name_short = "SDG 10, Reduced Inequalities"
+name_impact = "SDG 10, reduced inequalities"
+
+[[labels]]
+id = "SDG-11"
+json_key = "SDG11"
+name = "Sustainable Cities and Communities"
+number = "11"
+name_short = "SDG 11, Sustainable Cities and Communities"
+name_impact = "SDG 11, sustainable cities and communities"
+
+[[labels]]
+id = "SDG-12"
+json_key = "SDG12"
+name = "Responsible Consumption and Production"
+number = "12"
+name_short = "SDG 12, Responsible Consumption and Production"
+name_impact = "SDG 12, responsible consumption and production"
+
+[[labels]]
+id = "SDG-13"
+json_key = "SDG13"
+name = "Climate Action"
+number = "13"
+name_short = "SDG 13, Climate Action"
+name_impact = "SDG 13, climate action"
+
+[[labels]]
+id = "SDG-14"
+json_key = "SDG14"
+name = "Life Below Water"
+number = "14"
+name_short = "SDG 14, Life Below Water"
+name_impact = "SDG 14, life below water"
+
+[[labels]]
+id = "SDG-15"
+json_key = "SDG15"
+name = "Life on Land"
+number = "15"
+name_short = "SDG 15, Life on Land"
+name_impact = "SDG 15, life on land"
+
+[[labels]]
+id = "SDG-16"
+json_key = "SDG16"
+name = "Peace, Justice and Strong Institutions"
+number = "16"
+name_short = "SDG 16, Peace, Justice and Strong Institutions"
+name_impact = "SDG 16, peace, justice and strong institutions"
+
+[[labels]]
+id = "SDG-17"
+json_key = "SDG17"
+name = "Partnerships for the Goals"
+number = "17"
+name_short = "SDG 17, Partnerships for the Goals"
+name_impact = "SDG 17, partnerships for the goals"

@@ -1,0 +1,77 @@
+[question]
+name = "protocol_v1/adt_pass2"
+level = "work x list"
+readout = "letter_logprob"
+status = "record"
+
+[question.prompt_ids]
+AI = "adtp2-92e7027dcba2+adtdesc-ai-6e56892a59fd+adtbound-ai-db58219c6226"
+IOT = "adtp2-92e7027dcba2+adtdesc-iot-798f24b085a0+adtbound-iot-6edba242d4c2"
+COMPUTING_INFRASTRUCTURE = "adtp2-92e7027dcba2+adtdesc-computing-infrastructure-f285bcadfe5f+adtbound-computing-infrastructure-2b73b01a3e19"
+BLOCKCHAIN = "adtp2-92e7027dcba2+adtdesc-blockchain-4b50ccb19ace+adtbound-blockchain-db50c42c89da"
+ROBOTICS = "adtp2-92e7027dcba2+adtdesc-robotics-a73ea378205d+adtbound-robotics-ebfc2e7c7445"
+ADDITIVE_MANUFACTURING = "adtp2-92e7027dcba2+adtdesc-additive-manufacturing-23384d3273ac+adtbound-additive-manufacturing-8774d4826a7b"
+
+[lists]
+a = "adt"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["adt_pass2_v4.md"]
+system = "SYSTEM_ADT_PASS2"
+user = "USER_ADT_PASS2"
+
+[blocks.fill.system]
+role_rules = "block:ROLE_RULES"
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+technology = "material:name"
+definition = "material:definition"
+boundaries = "material:boundaries"
+
+[material.description]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+
+[material.name]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+part = "name"
+
+[material.definition]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+part = "body"
+
+[material.boundaries]
+list = "a"
+file = "adt_boundaries_v4.md"
+block = "{id}"
+
+[readout]
+letters = ["N", "M", "T", "A", "E"]
+
+[budget]
+max_tokens = 1
+top_logprobs = 20
+
+[id]
+prefix = "adtp2"
+blocks = ["SYSTEM_ADT_PASS2", "ROLE_RULES", "USER_ADT_PASS2"]
+
+[[id.parts]]
+per = "label"
+prefix = "adtdesc-{slug}"
+material = ["description"]
+
+[[id.parts]]
+per = "label"
+prefix = "adtbound-{slug}"
+material = ["boundaries"]

@@ -1,0 +1,37 @@
+[question]
+name = "paper/sdg_v1"
+level = "work"
+readout = "letter_text"
+fill = "replace"
+status = "experimental"
+prompt_id = "sdg1-042b7b2c693f"
+
+[lists]
+a = "sdg"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["paper_sdg_v1.md"]
+system = "SYSTEM"
+user = "USER_TEMPLATE"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+
+[readout]
+letters = ["Y", "N"]
+layout = "table"
+table = "SDG"
+
+[budget]
+max_tokens = 16000
+retry_max_tokens = 32000
+
+[id]
+prefix = "sdg1"
+blocks = ["SYSTEM", "USER_TEMPLATE"]

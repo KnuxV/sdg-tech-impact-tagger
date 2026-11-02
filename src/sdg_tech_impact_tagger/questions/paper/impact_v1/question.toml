@@ -1,0 +1,63 @@
+[question]
+name = "paper/impact_v1"
+level = "work x list x list"
+per_call = "work"
+readout = "json_object"
+status = "experimental"
+prompt_id = "p3.2w-50ba3b728c25"
+
+[lists]
+a = "adt"
+b = "sdg"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["../../impact/p3_2/impact_p3_2.md", "impact_p3_2_work.md"]
+system = "SYSTEM"
+user = "USER_TEMPLATE"
+
+[[sides]]
+name = "pos"
+block = "Q_POS"
+
+[[sides]]
+name = "neg"
+block = "Q_NEG"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+sdg = "b:name_impact"
+targets = "material:targets"
+question = "side"
+
+[blocks.fill.side]
+adt = "a:name_impact"
+sdg = "b:name_impact"
+
+[material.targets]
+list = "b"
+file = "../../impact/p3_2/impact_sdg_targets.json"
+json_path = "targets"
+key = "{json_key}"
+
+[assembly]
+kind = "impact_work_v1"
+preamble = "PREAMBLE"
+cut = "The goal is"
+
+[readout]
+form = "impact_pairs_v1"
+
+[budget]
+max_tokens = 32000
+retry_max_tokens = 48000
+
+[id]
+prefix = "p3.2w"
+blocks = ["PREAMBLE"]
+inner = "impact/p3_2"

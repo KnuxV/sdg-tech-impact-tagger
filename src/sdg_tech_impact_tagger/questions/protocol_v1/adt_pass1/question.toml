@@ -1,0 +1,61 @@
+[question]
+name = "protocol_v1/adt_pass1"
+level = "work"
+readout = "score_json"
+status = "record"
+prompt_id = "adtp1-eb4f16256516+adtdesc-e8f65488c44f"
+
+[lists]
+a = "adt"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["adt_pass1_v3.md"]
+system = "SYSTEM_ADT_SCORE"
+user = "USER_ADT_SCORE"
+
+[blocks.fill.system]
+descriptions = "listing:descriptions"
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+
+[material.description]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+
+[material.name]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+part = "name"
+
+[material.definition]
+list = "a"
+file = "adt_descriptions_v3.md"
+block = "{id}"
+part = "body"
+
+[listing.descriptions]
+list = "a"
+item = "{id}: {name}\n{definition}"
+sep = "\n\n"
+
+[readout]
+schema_name = "adt_scores"
+
+[budget]
+max_tokens = 1024
+
+[id]
+prefix = "adtp1"
+blocks = ["SYSTEM_ADT_SCORE", "USER_ADT_SCORE"]
+
+[[id.parts]]
+per = "list"
+prefix = "adtdesc"
+material = ["description"]

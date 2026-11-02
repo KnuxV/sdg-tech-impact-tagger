@@ -1,0 +1,48 @@
+[question]
+name = "impact/p2"
+level = "work x list x list"
+readout = "letter_logprob"
+status = "record"
+prompt_id = "p2-ed1dd92de43c"
+
+[lists]
+a = "adt"
+b = "sdg"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["p2.md"]
+system = "SYSTEM"
+user = "USER_TEMPLATE"
+
+[[sides]]
+name = "pos"
+block = "Q_POS"
+
+[[sides]]
+name = "neg"
+block = "Q_NEG"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+question = "side"
+
+[blocks.fill.side]
+adt = "a:name_impact"
+sdg = "b:name_impact"
+
+[readout]
+letters = ["Y", "N"]
+
+[budget]
+max_tokens = 1
+top_logprobs = 20
+
+[id]
+prefix = "p2"
+blocks = ["SYSTEM", "USER_TEMPLATE", "Q_POS", "Q_NEG"]

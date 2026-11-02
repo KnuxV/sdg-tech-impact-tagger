@@ -1,0 +1,37 @@
+[question]
+name = "paper/adt_v1"
+level = "work"
+readout = "letter_text"
+fill = "replace"
+status = "experimental"
+prompt_id = "adt1-d95d2cfc8f17"
+
+[lists]
+a = "adt"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["paper_adt_v1.md"]
+system = "SYSTEM"
+user = "USER_TEMPLATE"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+
+[readout]
+letters = ["E", "A", "T", "M", "N"]
+layout = "table"
+table = "ADT"
+
+[budget]
+max_tokens = 16000
+retry_max_tokens = 32000
+
+[id]
+prefix = "adt1"
+blocks = ["SYSTEM", "USER_TEMPLATE"]

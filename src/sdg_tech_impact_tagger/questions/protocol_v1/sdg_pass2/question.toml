@@ -1,0 +1,70 @@
+[question]
+name = "protocol_v1/sdg_pass2"
+level = "work x list"
+readout = "letter_logprob"
+status = "record"
+
+[question.prompt_ids]
+"SDG-01" = "sdgp2-dcccffcc8667+sdggoal-01-b05a3b57ee53"
+"SDG-02" = "sdgp2-dcccffcc8667+sdggoal-02-a0abf5657e91"
+"SDG-03" = "sdgp2-dcccffcc8667+sdggoal-03-8a79d5d16d42"
+"SDG-04" = "sdgp2-dcccffcc8667+sdggoal-04-ae998db6225b"
+"SDG-05" = "sdgp2-dcccffcc8667+sdggoal-05-9fb409d791af"
+"SDG-06" = "sdgp2-dcccffcc8667+sdggoal-06-d2d571100fc2"
+"SDG-07" = "sdgp2-dcccffcc8667+sdggoal-07-c5656ae949f3"
+"SDG-08" = "sdgp2-dcccffcc8667+sdggoal-08-d6070daefc10"
+"SDG-09" = "sdgp2-dcccffcc8667+sdggoal-09-1916b68fb388"
+"SDG-10" = "sdgp2-dcccffcc8667+sdggoal-10-c718e4343f6c"
+"SDG-11" = "sdgp2-dcccffcc8667+sdggoal-11-336f45b5c0d7"
+"SDG-12" = "sdgp2-dcccffcc8667+sdggoal-12-36c122498095"
+"SDG-13" = "sdgp2-dcccffcc8667+sdggoal-13-5fa43779c36d"
+"SDG-14" = "sdgp2-dcccffcc8667+sdggoal-14-f858193eb567"
+"SDG-15" = "sdgp2-dcccffcc8667+sdggoal-15-d258a447ed65"
+"SDG-16" = "sdgp2-dcccffcc8667+sdggoal-16-159855659488"
+"SDG-17" = "sdgp2-dcccffcc8667+sdggoal-17-639f3dbc94ff"
+
+[lists]
+a = "sdg"
+
+[text]
+fields = ["title", "abstract"]
+
+[blocks]
+files = ["sdg_pass2_v3.md"]
+system = "SYSTEM_PASS2"
+user = "USER_PASS2"
+
+[blocks.fill.system]
+
+[blocks.fill.user]
+title = "text:title"
+abstract = "text:abstract"
+goal = "a:name_short"
+scope = "material:scope"
+targets = "material:targets"
+
+[material.scope]
+list = "a"
+file = "sdg_pass2_v3/{id}.md"
+block = "GOAL_SCOPE"
+
+[material.targets]
+list = "a"
+file = "sdg_pass2_v3/{id}.md"
+block = "GOAL_TARGETS"
+
+[readout]
+letters = ["Y", "N"]
+
+[budget]
+max_tokens = 1
+top_logprobs = 20
+
+[id]
+prefix = "sdgp2"
+blocks = ["SYSTEM_PASS2", "USER_PASS2"]
+
+[[id.parts]]
+per = "label"
+prefix = "sdggoal-{number}"
+material = ["scope", "targets"]
