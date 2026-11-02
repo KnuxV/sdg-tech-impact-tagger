@@ -1,0 +1,55 @@
+[project]
+name = "sdg-tech-impact-tagger"
+version = "0.1.0.dev0"
+description = "Label texts with sustainable development goals, digital technologies, their impact or any list of labels, through any OpenAI-compatible LLM endpoint, by versioned questions and declarative workflows."
+readme = "README.md"
+authors = [
+    { name = "Kevin Michoud", email = "kmichoud@unistra.fr" }
+]
+license = "GPL-3.0-only"
+license-files = ["LICENSE", "LICENSE-DATA.md", "CREDITS.md"]
+requires-python = ">=3.13"
+dependencies = [
+    "httpx>=0.28.0",
+    "polars>=1.34.0",
+    "pydantic>=2.11.0",
+]
+keywords = [
+    "sustainable development goals",
+    "SDG",
+    "digital technologies",
+    "LLM",
+    "annotation",
+    "text classification",
+    "bibliometrics",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Topic :: Text Processing :: Linguistic",
+]
+
+[project.urls]
+Homepage = "https://github.com/KnuxV/sdg-tech-impact-tagger"
+Repository = "https://github.com/KnuxV/sdg-tech-impact-tagger"
+Issues = "https://github.com/KnuxV/sdg-tech-impact-tagger/issues"
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.0",
+    "ruff>=0.16.0",
+]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
