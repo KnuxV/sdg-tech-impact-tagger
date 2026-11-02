@@ -58,6 +58,37 @@ def contract_key(fields: dict[str, Any]) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+RUN_RECORD_KEYS = (
+    "prompt_ids",
+    "readout",
+    "layout",
+    "form",
+    "letters",
+    "answer_schema",
+    "model",
+    "seed",
+    "temperature",
+    "max_tokens",
+    "retry_max_tokens",
+    "top_logprobs",
+    "response_format",
+    "extra_body",
+    "reasoning",
+    "spelling",
+    "extraction",
+    "budget_rule",
+    "null_text",
+)
+
+
+def contract_run_id(**record: Any) -> str:
+    """Contract 3.6: the run id of a record of its 19 keys, those not given null."""
+    assert set(record) <= set(RUN_RECORD_KEYS), set(record) - set(RUN_RECORD_KEYS)
+    full = {key: record.get(key) for key in RUN_RECORD_KEYS}
+    blob = json.dumps(full, sort_keys=True, separators=(",", ":"))
+    return "run-" + sha12(blob)
+
+
 def frame_digest(rows: list[list[Any]]) -> str:
     """Contract 6.7: hex sha256 of the rows as JSON lists joined by newlines."""
     text = "\n".join(json.dumps(row, ensure_ascii=False) for row in rows)

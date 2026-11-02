@@ -18,6 +18,7 @@ from conftest import (
     TEXTS,
     Endpoint,
     chat,
+    frame_digest,
     model_entry,
     never_called,
     score_question,
@@ -191,7 +192,7 @@ def test_a_claim_holding_its_own_name_is_its_own(tmp_path, key_env):
 @pytest.mark.parametrize("worker", ["", "two words", "a/b", "x" * 65, "é"])
 def test_worker_name_is_checked(tmp_path, key_env, worker):
     workflow = tagger.load_workflow(project(tmp_path))
-    with pytest.raises((tagger.TaggerError, ValueError)):
+    with pytest.raises(tagger.WorkflowError):
         tagger.run(workflow, worker=worker, transport=Endpoint(never_called).transport)
 
 
@@ -448,10 +449,28 @@ def test_a_source_without_output_stops_the_reading_pass(tmp_path, key_env):
 
 def test_a_pass_reading_a_missing_output_is_refused(tmp_path, key_env):
     workflow = tagger.load_workflow(two_passes(tmp_path))
-    with pytest.raises(tagger.TaggerError):
+    with pytest.raises(tagger.UnitsError) as info:
         tagger.run(
             workflow, passes=["pick"], transport=Endpoint(never_called).transport
         )
+    # Contract 10.1: the error names the missing source table.
+    assert str(Path("scores") / "m1.parquet") in str(info.value)
+    assert not (tmp_path / "runs" / "wf" / "pick").exists()
+
+
+@pytest.mark.parametrize(
+    ("passes", "models"), [(["nowhere"], None), (None, ["m9"]), ([], None), (None, [])]
+)
+def test_restrictions_naming_nothing_are_refused(tmp_path, key_env, passes, models):
+    workflow = tagger.load_workflow(project(tmp_path))
+    with pytest.raises(tagger.WorkflowError):
+        tagger.run(
+            workflow,
+            passes=passes,
+            models=models,
+            transport=Endpoint(never_called).transport,
+        )
+    assert not (tmp_path / "runs").exists()
 
 
 # --------------------------------------------------------------------------
@@ -560,13 +579,13 @@ def test_no_texts_at_all_is_refused(tmp_path, key_env):
         + '[[passes]]\nid = "p"\nquestion_dir = "q"\nmodels = ["m1"]\nunits = { rule = "all" }\n'
     )
     path = write_workflow(tmp_path, body, texts=None)
-    with pytest.raises((tagger.WorkflowError, tagger.TextsError)):
-        tagger.run(
-            tagger.load_workflow(path), transport=Endpoint(never_called).transport
-        )
+    workflow = tagger.load_workflow(path)
+    with pytest.raises(tagger.TextsError):
+        tagger.run(workflow, transport=Endpoint(never_called).transport)
+    assert not (tmp_path / "runs").exists()
 
 
-def test_open_marker_is_refused_before_any_call(tmp_path, key_env):
+def test_open_marker_in_a_block_is_refused_at_load(tmp_path):
     write_texts(tmp_path)
     write_question(
         tmp_path / "q",
@@ -585,10 +604,26 @@ def test_open_marker_is_refused_before_any_call(tmp_path, key_env):
     )
     path = write_workflow(tmp_path, body)
     with pytest.raises(tagger.QuestionError):
-        tagger.run(
-            tagger.load_workflow(path), transport=Endpoint(never_called).transport
-        )
+        tagger.load_workflow(path)
     assert not (tmp_path / "runs").exists()
+
+
+def test_open_marker_in_a_work_is_sent_as_it_is(tmp_path, key_env):
+    """Contract 3.4: a work's own text is never checked for the marker."""
+    frame = TEXTS.with_columns(
+        pl.when(pl.col("id") == "a1")
+        .then(pl.lit("[[OPEN tea"))
+        .otherwise(pl.col("title"))
+        .alias("title")
+    )
+    endpoint = Endpoint(answer)
+    [result] = tagger.run(
+        tagger.load_workflow(project(tmp_path)),
+        texts=frame,
+        transport=endpoint.transport,
+    )
+    assert endpoint.users()[1] == "Text: [[OPEN tea\nLeaves."
+    assert result.output_written
 
 
 # --------------------------------------------------------------------------
@@ -668,10 +703,36 @@ def test_keys_and_env_never_in_the_run_files(tmp_path, key_env):
                 assert "test-secret" not in Path(root, name).read_text(encoding="utf-8")
 
 
-@pytest.mark.skip(
-    reason="contract 6.7: the key columns over which units_sha256 is computed (with "
-    "or without repeat, flags and source_score) are not listed; question "
-    "journalled 2026-11-02"
-)
-def test_units_sha256_value():
-    """units_sha256 equals frame_digest over the planned units' key columns."""
+@pytest.mark.parametrize("repeats", [1, 2])
+def test_units_sha256_at_level_work(tmp_path, key_env, repeats):
+    """Contract 6.7: frame_digest over ["id"] in plan order, once per unit."""
+    path = project(tmp_path, pass_extra=f"chunk_size = 1\nrepeats = {repeats}")
+    tagger.run(tagger.load_workflow(path), transport=Endpoint(answer).transport)
+    record = json.loads((work_dir(tmp_path) / "run.json").read_text(encoding="utf-8"))
+    assert record["units"] == 3 and record["repeats"] == repeats
+    assert record["units_sha256"] == frame_digest([["b2"], ["a1"], ["c3"]])
+
+
+def test_units_sha256_of_threshold_units(tmp_path, key_env):
+    """Work position then code string order; source_score is not hashed."""
+    workflow = tagger.load_workflow(two_passes(tmp_path))
+    tagger.run(workflow, transport=Endpoint(two_pass_answer).transport)
+    path = tmp_path / "runs" / "wf" / "pick" / "m1" / "run.json"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    plan = [[w, c] for w in ("b2", "a1", "c3") for c in ("BLUE", "GREEN")]
+    assert record["units"] == 6
+    assert record["units_sha256"] == frame_digest(plan)
+
+
+def test_combine_only_never_reads_the_key(tmp_path, key_env, monkeypatch):
+    """Contract 6.7: combine_only makes no call and opens no cache, replay or not."""
+    workflow = tagger.load_workflow(project(tmp_path))
+    [first] = tagger.run(workflow, transport=Endpoint(answer).transport)
+    first.output.unlink()
+    shutil.rmtree(tmp_path / "cache")
+    monkeypatch.delenv("TAGGER_TEST_KEY")
+    [result] = tagger.run(
+        workflow, combine_only=True, transport=Endpoint(never_called).transport
+    )
+    assert result.output_written
+    assert not (tmp_path / "cache").exists()

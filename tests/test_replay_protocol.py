@@ -19,6 +19,7 @@ from conftest import (
     RUN_ID_RE,
     Endpoint,
     assert_table,
+    contract_run_id,
     copy_calls,
     frame_digest,
     never_called,
@@ -248,6 +249,26 @@ def test_run_record(replayed):
     table = output_of(results, "sdg_pass1", "qwen3")
     assert record["run_id"] == table["run_id"][0]
     assert RUN_ID_RE.match(record["run_id"])
+    # Contract 6.7: at level work, the ids of the units in plan order.
+    assert record["units_sha256"] == frame_digest([[r[0]] for r in works.rows()])
+
+
+def test_units_sha256_at_the_list_levels(replayed):
+    tmp_path, _, results = replayed
+    root = tmp_path / "runs" / "protocol-v1-impact"
+    # Threshold units: work position in the texts, then code in string order.
+    position = {w: n for n, w in enumerate(works_frame("protocol_impact")["id"])}
+    table = output_of(results, "sdg_pass2", "qwen3")
+    plan = sorted(
+        table.select("id", "code").rows(), key=lambda u: (position[u[0]], u[1])
+    )
+    record = json.loads((root / "sdg_pass2" / "qwen3" / "run.json").read_text("utf-8"))
+    assert record["units_sha256"] == frame_digest([list(u) for u in plan])
+    # Cross units with agreed_first, in the [WS] plan order; code is `<a>|<b>`.
+    plan = read_json(BASE / "impact_plan.json")
+    record = json.loads((root / "impact" / "coder" / "run.json").read_text("utf-8"))
+    assert record["units_sha256"] == frame_digest(plan)
+    assert record["units"] == len(plan)
 
 
 def test_run_record_per_label_ids(replayed):
@@ -267,6 +288,100 @@ def tagger_questions_ids() -> list[str]:
     from conftest import QUESTIONS
 
     return (QUESTIONS / "IDS.tsv").read_text(encoding="utf-8").splitlines()
+
+
+def ids_of(question: str) -> dict[str, str]:
+    return {
+        line.split("\t")[1]: line.split("\t")[2]
+        for line in tagger_questions_ids()
+        if line.startswith(question + "\t")
+    }
+
+
+IMPACT_GEMMA_EXTRA = {
+    "chat_template_kwargs": {"enable_thinking": True},
+    "logprobs": False,
+}
+
+
+def letter_logprob_run_id(
+    question, letters, model, spelling="sum", extraction="first_token"
+):
+    return contract_run_id(
+        prompt_ids=ids_of(question),
+        readout="letter_logprob",
+        letters=letters,
+        model=model,
+        seed=42,
+        temperature=0.0,
+        max_tokens=1,
+        top_logprobs=20,
+        extra_body={},
+        reasoning="off",
+        spelling=spelling,
+        extraction=extraction,
+        null_text="",
+    )
+
+
+def test_run_ids_given_by_the_contract(replayed):
+    _, _, results = replayed
+    # Contract 3.6 gives these two values.
+    assert output_of(results, "impact", "coder")["run_id"].unique().to_list() == [
+        "run-5295f828ba65"
+    ]
+    assert output_of(results, "adt_pass2", "gemma")["run_id"].unique().to_list() == [
+        "run-da78be5306bb"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("pass_id", "model", "expected"),
+    [
+        (
+            "sdg_pass2",
+            "qwen3",
+            lambda: letter_logprob_run_id("protocol_v1/sdg_pass2", ["Y", "N"], "qwen3"),
+        ),
+        (
+            "sdg_pass2",
+            "gemma",
+            lambda: letter_logprob_run_id("protocol_v1/sdg_pass2", ["Y", "N"], "gemma"),
+        ),
+        (
+            "adt_pass2",
+            "qwen3",
+            lambda: letter_logprob_run_id(
+                "protocol_v1/adt_pass2", ["N", "M", "T", "A", "E"], "qwen3"
+            ),
+        ),
+        (
+            "impact",
+            "gemma_thinking",
+            lambda: contract_run_id(
+                prompt_ids={"": "p3.2-f72f01757eef"},
+                readout="letter_text",
+                layout="single",
+                letters=["Y", "N"],
+                model="gemma",
+                seed=42,
+                temperature=0.0,
+                max_tokens=4000,
+                retry_max_tokens=12000,
+                top_logprobs=0,
+                extra_body=IMPACT_GEMMA_EXTRA,
+                reasoning="on",
+                budget_rule="tokens",
+                null_text="",
+            ),
+        ),
+    ],
+)
+def test_run_ids_by_the_formula(replayed, pass_id, model, expected):
+    _, _, results = replayed
+    assert output_of(results, pass_id, model)["run_id"].unique().to_list() == [
+        expected()
+    ]
 
 
 def test_run_ids_differ_between_passes_and_models(replayed):
@@ -328,19 +443,72 @@ def test_manifest(replayed):
     assert manifest["system_fingerprints"] == {"fp-g1": 4}
     from conftest import QUESTIONS
 
+    # Contract 9: every file the question read, question.toml included, by the
+    # path written in question.toml.
     directory = QUESTIONS / "protocol_v1" / "sdg_pass1"
-    sums = {
-        hashlib.sha256(p.read_bytes()).hexdigest()
-        for p in directory.iterdir()
-        if p.is_file()
+    assert manifest["question_files"] == {
+        name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
+        for name in ("question.toml", "sdg_pass1.md")
     }
-    values = set(manifest["question_files"].values())
-    assert (
-        hashlib.sha256((directory / "sdg_pass1.md").read_bytes()).hexdigest() in values
-    )
-    assert values <= sums
     sdg_list = QUESTIONS.parent / "lists" / "sdg.toml"
     assert manifest["lists"]["sdg"] == hashlib.sha256(sdg_list.read_bytes()).hexdigest()
+
+
+@pytest.mark.parametrize(
+    ("pass_id", "model", "question", "names"),
+    [
+        (
+            "sdg_pass2",
+            "qwen3",
+            "protocol_v1/sdg_pass2",
+            ["question.toml", "sdg_pass2_v3.md"]
+            + [f"sdg_pass2_v3/SDG-{n:02d}.md" for n in range(1, 18)],
+        ),
+        (
+            "impact",
+            "coder",
+            "impact/p3_2",
+            ["question.toml", "impact_p3_2.md", "impact_sdg_targets.json"],
+        ),
+    ],
+)
+def test_manifest_question_files(replayed, pass_id, model, question, names):
+    """Material paths formatted per label, for every label of the list (3.4, 9)."""
+    from conftest import QUESTIONS
+
+    tmp_path, _, _ = replayed
+    work = tmp_path / "runs" / "protocol-v1-impact" / pass_id / model
+    manifest = json.loads((work / "manifest.json").read_text(encoding="utf-8"))
+    directory = QUESTIONS / question
+    assert manifest["question_files"] == {
+        name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
+        for name in names
+    }
+
+
+def test_manifest_file_format(replayed):
+    tmp_path, _, _ = replayed
+    path = (
+        tmp_path / "runs" / "protocol-v1-impact" / "impact" / "coder" / "manifest.json"
+    )
+    text = path.read_text(encoding="utf-8")
+    assert text == json.dumps(json.loads(text), indent=2, sort_keys=True) + "\n"
+
+
+def test_manifest_counts_of_a_pass_with_sides(replayed):
+    """Contract 9: retried counts rows with any side retried; parse_failures rows."""
+    tmp_path, _, results = replayed
+    for model in ("coder", "gemma_thinking"):
+        work = tmp_path / "runs" / "protocol-v1-impact" / "impact" / model
+        counts = json.loads((work / "manifest.json").read_text(encoding="utf-8"))[
+            "counts"
+        ]
+        table = output_of(results, "impact", model)
+        retried = table.filter(pl.col("pos_retried") | pl.col("neg_retried")).height
+        assert retried > 0
+        assert counts["retried"] == retried
+        assert counts["parse_failures"] == table["parse_failure"].sum()
+        assert counts["rows"] == table.height == counts["units"]
 
 
 def test_call_log(replayed):
@@ -434,10 +602,13 @@ def test_final_channel_extraction(tmp_path):
     )
     assert 'extraction = "final_channel"' in text
     results = only(tmp_path, text, ["sdg_pass1", "sdg_pass2"], ["qwen3"])
-    assert_table(
-        output_of(results, "sdg_pass2", "qwen3"),
-        EXPECTED / "sdg_pass2__qwen3__final_channel.json",
-    )
+    table = output_of(results, "sdg_pass2", "qwen3")
+    assert_table(table, EXPECTED / "sdg_pass2__qwen3__final_channel.json")
+    assert table["run_id"].unique().to_list() == [
+        letter_logprob_run_id(
+            "protocol_v1/sdg_pass2", ["Y", "N"], "qwen3", extraction="final_channel"
+        )
+    ]
 
 
 def test_run_id_moves_with_a_read_setting_but_not_the_prompt_id(tmp_path):
@@ -451,6 +622,11 @@ def test_run_id_moves_with_a_read_setting_but_not_the_prompt_id(tmp_path):
     first, second = (output_of(r, "sdg_pass2", "qwen3") for r in (plain, exact))
     assert first["prompt_id"].to_list() == second["prompt_id"].to_list()
     assert first["run_id"][0] != second["run_id"][0]
+    assert second["run_id"].unique().to_list() == [
+        letter_logprob_run_id(
+            "protocol_v1/sdg_pass2", ["Y", "N"], "qwen3", spelling="exact"
+        )
+    ]
     # Pass 1 is unchanged, so is its run id.
     assert (
         output_of(plain, "sdg_pass1", "qwen3")["run_id"][0]
@@ -491,7 +667,7 @@ def test_unrecorded_prefix_is_refused(tmp_path):
     text = workflow_text(impact_extra='budget_rule = "tokens"\nprompt_prefix = "p9"')
     path = setup(tmp_path, text)
     # Contract 3.5: the id under another prefix must be one of recorded_ids.
-    with pytest.raises((tagger.WorkflowError, tagger.QuestionError)):
+    with pytest.raises(tagger.WorkflowError):
         tagger.load_workflow(path)
 
 

@@ -143,7 +143,8 @@ def test_run_combine_only(tmp_path, key_env):
     assert command("run", path, "--replay", cwd=tmp_path).returncode == 0
     (tmp_path / "runs" / "wf" / "p" / "m1.parquet").unlink()
     shutil.rmtree(tmp_path / "cache")
-    done = command("run", path, "--combine-only", "--replay", cwd=tmp_path)
+    # Contract 6.7: combine_only never reads the key, with or without replay.
+    done = command("run", path, "--combine-only", cwd=tmp_path)
     assert done.returncode == 0, done.stderr
     assert (
         pl.read_parquet(tmp_path / "runs" / "wf" / "p" / "m1.parquet")
@@ -287,6 +288,34 @@ def test_check_a_workflow_file(tmp_path, key_env):
 # --------------------------------------------------------------------------
 
 
+PROMPT_CASES = {
+    # question: (list ids, side names)
+    "protocol_v1/sdg_pass1": ((), ()),
+    "protocol_v1/sdg_pass2": (("sdg",), ()),
+    "protocol_v1/adt_pass2": (("adt",), ()),
+    "impact/p3_2": (("adt", "sdg"), ("pos", "neg")),
+}
+
+
+def expected_prompt(question: str, codes: tuple[str, ...]) -> str:
+    """Contract 10.2: every call of the unit, each as the [OA] print, one empty line between."""
+    lists, sides = PROMPT_CASES[question]
+    loaded = tagger.load_question(question)
+    texts = {field: f"<{field}>" for field in loaded.text_fields}
+    calls = loaded.render(texts, [codes] if codes else [])
+    ids = dict(loaded.prompt_ids)
+    prompt_id = ids[codes[0]] if codes and codes[0] in ids else ids[""]
+    header = f"prompt {prompt_id}"
+    for list_id, code in zip(lists, codes, strict=True):
+        header += f", {list_id} {code}"
+    headers = [header + f", side {side}" for side in sides] if sides else [header]
+    assert len(headers) == len(calls)
+    return "\n".join(
+        f"{h}\n\n--- system ---\n{system}\n\n--- user ---\n{user}\n"
+        for h, (system, user) in zip(headers, calls, strict=True)
+    )
+
+
 @pytest.mark.parametrize(
     ("question", "codes"),
     [
@@ -296,19 +325,30 @@ def test_check_a_workflow_file(tmp_path, key_env):
         ("impact/p3_2", ("IOT", "SDG-07")),
     ],
 )
-def test_prompt_prints_the_call_with_placeholders(tmp_path, question, codes):
-    loaded = tagger.load_question(question)
-    texts = {field: f"<{field}>" for field in loaded.text_fields}
-    units = [codes] if codes else []
-    calls = loaded.render(texts, units)
+def test_prompt_prints_every_call_of_the_unit(tmp_path, question, codes):
     args = ["prompt", question]
     for flag, code in zip(("--a", "--b"), codes, strict=False):
         args += [flag, code]
     done = command(*args, cwd=tmp_path)
     assert done.returncode == 0, done.stderr
-    system, user = calls[0]
-    assert system in done.stdout and user in done.stdout
-    assert "<title>" in done.stdout
+    assert done.stdout.rstrip("\n") == expected_prompt(question, codes).rstrip("\n")
+    assert "<title>" in done.stdout and "<abstract>" in done.stdout
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize(
+    ("question", "codes"),
+    [("protocol_v1/sdg_pass2", ("SDG-01",)), ("impact/p3_2", ("AI", "SDG-01"))],
+)
+def test_prompt_defaults_to_the_first_label_of_each_list(tmp_path, question, codes):
+    done = command("prompt", question, cwd=tmp_path)
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.rstrip("\n") == expected_prompt(question, codes).rstrip("\n")
+
+
+def test_prompt_with_a_code_not_in_the_list_exits_1(tmp_path):
+    done = command("prompt", "protocol_v1/sdg_pass2", "--a", "SDG-18", cwd=tmp_path)
+    assert done.returncode == 1
 
 
 # --------------------------------------------------------------------------

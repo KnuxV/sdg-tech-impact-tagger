@@ -18,7 +18,9 @@ from conftest import (
     TEXTS,
     Endpoint,
     chat,
+    contract_run_id,
     model_entry,
+    never_called,
     write_question,
     write_texts,
     write_workflow,
@@ -176,28 +178,45 @@ def test_score_json_unreadable(tmp_path, key_env, content):
     expect(table, SCORE_SCHEMA, score_rows(prompt_id, zero, True))
 
 
-def test_score_json_is_never_retried(tmp_path, key_env):
-    def writer(directory):
-        return write_question(
-            directory,
-            name="test/score",
-            blocks={"SYS": "You score colours.", "USR": "Text: {title}"},
-            fill_user={"title": "text:title"},
-            fields=["title"],
-            readout_table='schema_name = "colour_scores"',
-            budget="max_tokens = 5\nretry_max_tokens = 50",
-        )
+BUDGET_REFUSALS = [
+    # Contract 3.3: retry_max_tokens only on letter_text and json_object,
+    # top_logprobs (0 to 20) only on letter_logprob.
+    ("score_json", 'schema_name = "s"', "max_tokens = 5\nretry_max_tokens = 50"),
+    ("letter_logprob", 'letters = ["Y", "N"]', "max_tokens = 1\nretry_max_tokens = 50"),
+    ("score_json", 'schema_name = "s"', "max_tokens = 5\ntop_logprobs = 5"),
+    ("letter_text", 'letters = ["Y", "N"]', "max_tokens = 5\ntop_logprobs = 5"),
+    ("json_object", "__FIELDS__", "max_tokens = 5\ntop_logprobs = 5"),
+    ("letter_logprob", 'letters = ["Y", "N"]', "max_tokens = 1\ntop_logprobs = 21"),
+    ("letter_logprob", 'letters = ["Y", "N"]', "max_tokens = 1\ntop_logprobs = -1"),
+]
 
-    # retry_max_tokens is a budget key; whether score_json may carry it is not
-    # said, so a refusal at load is accepted too.
-    try:
-        workflow, _ = live(tmp_path, writer)
-    except (tagger.QuestionError, tagger.WorkflowError):
-        return
-    _, endpoint = run_with(
-        tmp_path, workflow, lambda p, n: chat("oops", finish="length", tout=5)
+
+@pytest.mark.parametrize(("readout", "readout_table", "budget"), BUDGET_REFUSALS)
+def test_budget_keys_a_readout_does_not_take(tmp_path, readout, readout_table, budget):
+    if readout_table == "__FIELDS__":
+        readout_table = FIELDS
+    level = "work x list" if readout.startswith("letter_") else "work"
+    write_question(
+        tmp_path / "q",
+        name="test/budget",
+        level=level,
+        readout=readout,
+        blocks={"SYS": "Answer.", "USR": "Text: {title}"},
+        fill_user={"title": "text:title"},
+        lists={"a": "adt"},
+        fields=["title"],
+        readout_table=readout_table,
+        budget=budget,
     )
-    assert len(endpoint.requests) == 1
+    with pytest.raises(tagger.QuestionError):
+        tagger.load_question(tmp_path / "q")
+
+
+def test_top_logprobs_zero_is_taken(tmp_path):
+    yn_question(
+        tmp_path / "q", budget="max_tokens = 1\ntop_logprobs = 0", lists={"a": "adt"}
+    )
+    tagger.load_question(tmp_path / "q")
 
 
 # --------------------------------------------------------------------------
@@ -428,7 +447,15 @@ def test_letter_logprob_word_letters(tmp_path, key_env):
 
 @pytest.mark.parametrize(
     "letters",
-    ['["Y", "y"]', '["Y", "Y"]', '["Y!", "N"]', '[""]', "[]", '["Y", 1]'],
+    [
+        '["Y", "y"]',
+        '["Y", "Y"]',
+        '["Y!", "N"]',
+        '[""]',
+        "[]",
+        '["Y", 1]',
+        '["OTHER", "N"]',
+    ],
 )
 def test_letter_logprob_bad_letters(tmp_path, letters):
     yn_question(
@@ -533,6 +560,25 @@ def test_budget_retry_rules(tmp_path, key_env, finish, tout, rule, again):
         assert len(endpoint.requests) == 1
         row = ("a1", 1, "m1", "first", "f1", prompt_id, "OTHER", False, 11, tout, True)
     expect(table, TEXT_SCHEMA, [row])
+    # Contract 3.6: with retry_max_tokens set, the run id holds the pass's rule.
+    assert table["run_id"].to_list() == [
+        contract_run_id(
+            prompt_ids={"": prompt_id},
+            readout="letter_text",
+            layout="single",
+            letters=["Y", "N"],
+            model="m1",
+            seed=7,
+            temperature=0.0,
+            max_tokens=5,
+            retry_max_tokens=50,
+            top_logprobs=0,
+            extra_body={"logprobs": False},
+            reasoning="off",
+            budget_rule=rule,
+            null_text="",
+        )
+    ]
 
 
 def test_budget_retry_is_made_once(tmp_path, key_env):
@@ -691,6 +737,21 @@ def test_letter_text_table_readable(tmp_path, key_env, case):
         "logprobs",
     }
     assert payload["logprobs"] is False
+    assert table["run_id"].unique().to_list() == [
+        contract_run_id(
+            prompt_ids={"": prompt_id},
+            readout="letter_text",
+            layout="table",
+            letters=["Y", "N"],
+            model="m1",
+            seed=7,
+            temperature=0.0,
+            max_tokens=300,
+            extra_body={"logprobs": False},
+            reasoning="off",
+            null_text="",
+        )
+    ]
 
 
 @pytest.mark.parametrize("case", sorted(UNREADABLE_TABLES))
@@ -806,25 +867,29 @@ GOOD_ITEMS = {
 }
 
 
+# Contract 4.5: the item schema of the declared fields, by the type table.
+DECLARED_ITEM = {
+    "type": "object",
+    "properties": {
+        "verdict": {"type": "string", "enum": ["Y", "N"]},
+        "reason": {"type": "string"},
+        "evidence": {"type": "string"},
+        "certain": {"type": "boolean"},
+        "rank": {"type": "integer"},
+        "weight": {"type": "number"},
+    },
+    "required": ["verdict", "reason", "evidence", "certain", "rank", "weight"],
+    "additionalProperties": False,
+}
+
+
 def test_label_object_request(tmp_path, key_env):
     workflow, _ = live(tmp_path, object_writer())
     _, endpoint = run_with(
         tmp_path, workflow, lambda p, n: chat(json.dumps(GOOD_ITEMS))
     )
     [payload] = endpoint.requests
-    item_schema = {
-        "type": "object",
-        "properties": {
-            "verdict": {"type": "string", "enum": ["Y", "N"]},
-            "reason": {"type": "string"},
-            "evidence": {"type": "string"},
-            "certain": {"type": "boolean"},
-            "rank": {"type": "integer"},
-            "weight": {"type": "number"},
-        },
-        "required": ["verdict", "reason", "evidence", "certain", "rank", "weight"],
-        "additionalProperties": False,
-    }
+    item_schema = DECLARED_ITEM
     assert payload["response_format"] == {
         "type": "json_schema",
         "json_schema": {
@@ -938,10 +1003,13 @@ def test_label_object_quote_not_in_the_text(tmp_path, key_env):
     workflow, _ = live(tmp_path, object_writer())
     items = {**GOOD_ITEMS, "BLUE": item(evidence="coffee")}
     table, _ = run_with(tmp_path, workflow, lambda p, n: chat(json.dumps(items)))
-    # Checked, never rejected: the reply stays readable. Whether quotes_ok is
-    # per row or for the whole reply is not said (journalled); BLUE's row is
-    # false either way.
-    assert table.filter(pl.col("code") == "BLUE")["quotes_ok"].to_list() == [False]
+    # Checked, never rejected: the reply stays readable. quotes_ok is per label
+    # row (4.5): GREEN's quote is blank, RED's is in the text.
+    assert table.select("code", "quotes_ok").rows() == [
+        ("BLUE", False),
+        ("GREEN", True),
+        ("RED", True),
+    ]
     assert table["parse_failure"].to_list() == [False, False, False]
     assert table["evidence"].to_list() == ["coffee", "  ", "tea\nLeav"]
 
@@ -1057,7 +1125,12 @@ def test_label_object_budget_retry(tmp_path, key_env):
 # --------------------------------------------------------------------------
 
 
-def test_answer_model_schema_and_validation(tmp_path, key_env):
+def answer_items(**fields):
+    return chat(json.dumps({c: dict(fields) for c in ("RED", "GREEN", "BLUE")}))
+
+
+def test_answer_model_schema_columns_and_run_id(tmp_path, key_env):
+    """Contract 4.5: the item schema, one column per field in model order, typed."""
     from typing import Literal
 
     import pydantic
@@ -1065,34 +1138,109 @@ def test_answer_model_schema_and_validation(tmp_path, key_env):
     class Item(pydantic.BaseModel):
         verdict: Literal["Y", "N"]
         evidence: tagger.Quote
+        strong: bool
+        rank: int = pydantic.Field(ge=0)
+        weight: float
 
-    workflow, _ = live(tmp_path, object_writer())
-    answers = [
-        chat(
-            json.dumps(
-                {
-                    c: {"verdict": "Y", "evidence": "Green"}
-                    for c in ("RED", "GREEN", "BLUE")
-                }
-            )
-        ),
-    ]
-    endpoint = Endpoint(lambda p, n: answers[0])
+    workflow, prompt_id = live(tmp_path, object_writer())
+    reply = answer_items(verdict="Y", evidence="Green", strong=True, rank=2, weight=0.5)
+    endpoint = Endpoint(lambda p, n: reply)
     [result] = tagger.run(
         workflow, answer_models={"p": Item}, transport=endpoint.transport
     )
     [payload] = endpoint.requests
     expected_item = {**Item.model_json_schema(), "additionalProperties": False}
-    expected_item["required"] = ["verdict", "evidence"]
-    schema = payload["response_format"]["json_schema"]["schema"]
-    assert schema["required"] == ["RED", "GREEN", "BLUE"]
-    assert schema["additionalProperties"] is False
-    assert all(
-        schema["properties"][c] == expected_item for c in ("RED", "GREEN", "BLUE")
-    )
+    response_format = {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "colour_items",
+            "strict": True,
+            "schema": {
+                "type": "object",
+                "properties": {c: expected_item for c in ("RED", "GREEN", "BLUE")},
+                "required": ["RED", "GREEN", "BLUE"],
+                "additionalProperties": False,
+            },
+        },
+    }
+    assert payload["response_format"] == response_format
+    schema = {
+        "id": pl.String,
+        "code": pl.String,
+        "repeat": pl.Int64,
+        **CALL,
+        "verdict": pl.String,
+        "evidence": pl.String,
+        "strong": pl.Boolean,
+        "rank": pl.Int64,
+        "weight": pl.Float64,
+        "quotes_ok": pl.Boolean,
+        "retried": pl.Boolean,
+        **TOKENS,
+        "parse_failure": pl.Boolean,
+    }
+    rows = [
+        (
+            "a1",
+            c,
+            1,
+            "m1",
+            "stub-model",
+            None,
+            prompt_id,
+            "Y",
+            "Green",
+            True,
+            2,
+            0.5,
+            True,
+            False,
+            10,
+            2,
+            False,
+        )
+        for c in ("BLUE", "GREEN", "RED")
+    ]
     table = pl.read_parquet(result.output)
-    assert table["parse_failure"].to_list() == [False, False, False]
-    assert table["quotes_ok"].to_list() == [True, True, True]
+    expect(table, schema, rows)
+    assert table["run_id"].unique().to_list() == [
+        contract_run_id(
+            prompt_ids={"": prompt_id},
+            readout="json_object",
+            form="label_object",
+            answer_schema=expected_item,
+            model="m1",
+            seed=7,
+            temperature=0.0,
+            max_tokens=400,
+            response_format=response_format,
+            extra_body={"logprobs": False},
+            reasoning="off",
+            null_text="",
+        )
+    ]
+
+
+def test_declared_fields_run_id(tmp_path, key_env):
+    """The answer_schema of the run id is the item schema, sent or not (3.6)."""
+    without = FIELDS.replace("schema = true", "schema = false")
+    workflow, prompt_id = live(tmp_path, object_writer(without))
+    table, _ = run_with(tmp_path, workflow, lambda p, n: chat(json.dumps(GOOD_ITEMS)))
+    assert table["run_id"].unique().to_list() == [
+        contract_run_id(
+            prompt_ids={"": prompt_id},
+            readout="json_object",
+            form="label_object",
+            answer_schema=DECLARED_ITEM,
+            model="m1",
+            seed=7,
+            temperature=0.0,
+            max_tokens=400,
+            extra_body={"logprobs": False},
+            reasoning="off",
+            null_text="",
+        )
+    ]
 
 
 def test_answer_model_validation_failure(tmp_path, key_env):
@@ -1112,53 +1260,275 @@ def test_answer_model_validation_failure(tmp_path, key_env):
     [result] = tagger.run(
         workflow, answer_models={"p": Item}, transport=endpoint.transport
     )
-    assert pl.read_parquet(result.output)["parse_failure"].to_list() == [
-        True,
-        True,
-        True,
+    table = pl.read_parquet(result.output)
+    assert table.columns[-7:] == [
+        "run_id",
+        "verdict",
+        "score",
+        "retried",
+        "tokens_in",
+        "tokens_out",
+        "parse_failure",
     ]
+    assert table["parse_failure"].to_list() == [True, True, True]
+    assert table["score"].to_list() == [None, None, None]
 
 
-def test_answer_model_with_an_optional_field_is_refused(tmp_path, key_env):
+def unfit_models():
+    import pydantic
+
+    class Optional_(pydantic.BaseModel):
+        verdict: str
+        note: str | None
+
+    class Default(pydantic.BaseModel):
+        verdict: str
+        note: str = "none"
+
+    class Listed(pydantic.BaseModel):
+        verdict: str
+        notes: list[str]
+
+    class Inner(pydantic.BaseModel):
+        text: str
+
+    class Nested(pydantic.BaseModel):
+        verdict: str
+        inner: Inner
+
+    return {
+        "nullable": Optional_,
+        "default": Default,
+        "array": Listed,
+        "nested": Nested,
+    }
+
+
+@pytest.mark.parametrize("case", ["nullable", "default", "array", "nested"])
+def test_answer_model_with_a_field_it_cannot_type(tmp_path, key_env, case):
+    workflow, _ = live(tmp_path, object_writer())
+    with pytest.raises(tagger.QuestionError):
+        tagger.run(
+            workflow,
+            answer_models={"p": unfit_models()[case]},
+            transport=Endpoint(never_called).transport,
+        )
+    assert not (tmp_path / "cache").exists()
+    assert not (tmp_path / "runs").exists()
+
+
+@pytest.mark.parametrize("target", ["nowhere", "not_label_object"])
+def test_answer_model_for_an_unknown_or_unfit_pass(tmp_path, key_env, target):
     import pydantic
 
     class Item(pydantic.BaseModel):
         verdict: str
-        note: str | None = None
 
-    workflow, _ = live(tmp_path, object_writer())
-    with pytest.raises(tagger.TaggerError):
+    write_texts(tmp_path, GREEN_TEA)
+    object_writer()(tmp_path / "q")
+    score_writer(tmp_path / "s")
+    body = model_entry() + (
+        '[[passes]]\nid = "p"\nquestion_dir = "q"\nmodels = ["m1"]\nunits = { rule = "all" }\n\n'
+        '[[passes]]\nid = "not_label_object"\nquestion_dir = "s"\nmodels = ["m1"]\n'
+        'units = { rule = "all" }\n'
+    )
+    workflow = tagger.load_workflow(write_workflow(tmp_path, body))
+    with pytest.raises(tagger.WorkflowError):
         tagger.run(
             workflow,
-            answer_models={"p": Item},
-            transport=Endpoint(lambda p, n: chat("{}")).transport,
+            answer_models={target: Item},
+            transport=Endpoint(never_called).transport,
         )
-    assert not (tmp_path / "cache").exists() or not list(
-        (tmp_path / "cache").rglob("*.json")
+    assert not (tmp_path / "runs").exists()
+
+
+# --------------------------------------------------------------------------
+# quotes_ok per label row (4.5)
+# --------------------------------------------------------------------------
+
+
+def test_label_object_quotes_ok_scope(tmp_path, key_env):
+    workflow, _ = live(tmp_path, object_writer())
+    items = {
+        "RED": item(evidence=""),
+        "GREEN": item(evidence=" \n "),
+        "BLUE": item(evidence="Green tea\nLeaves."),
+    }
+    table, _ = run_with(tmp_path, workflow, lambda p, n: chat(json.dumps(items)))
+    # A label whose quotes are all blank is true; the whole joined text is a substring.
+    assert table["quotes_ok"].to_list() == [True, True, True]
+
+
+def test_label_object_quotes_ok_with_two_quote_fields(tmp_path, key_env):
+    fields = FIELDS + '\n[[readout.fields]]\nname = "second"\ntype = "quote"\n'
+    workflow, _ = live(tmp_path, object_writer(fields))
+    items = {
+        "RED": {**item(evidence="Green"), "second": "tea"},
+        "GREEN": {**item(evidence="Green"), "second": "coffee"},
+        "BLUE": {**item(evidence="milk"), "second": ""},
+    }
+    table, _ = run_with(tmp_path, workflow, lambda p, n: chat(json.dumps(items)))
+    assert table.select("code", "quotes_ok").rows() == [
+        ("BLUE", False),
+        ("GREEN", False),
+        ("RED", True),
+    ]
+
+
+# --------------------------------------------------------------------------
+# the served model of a row standing on two calls (4.1, 8.2, 9)
+# --------------------------------------------------------------------------
+
+SIDES = """
+[[sides]]
+name = "pos"
+block = "POS"
+
+[[sides]]
+name = "neg"
+block = "NEG"
+
+[blocks.fill.side]
+colour = "a:name"
+"""
+
+
+def sides_writer(directory):
+    return write_question(
+        directory,
+        name="test/sides",
+        level="work x list",
+        readout="letter_text",
+        blocks={
+            "SYS": "Answer Y or N.",
+            "USR": "Text: {title}\n{question}",
+            "POS": "Good for {colour}?",
+            "NEG": "Bad for {colour}?",
+        },
+        fill_user={"title": "text:title", "question": "side"},
+        fields=["title"],
+        readout_table='letters = ["Y", "N"]',
+        budget="max_tokens = 5",
+        extra=SIDES,
     )
 
 
-@pytest.mark.skip(
-    reason="contract 4.5: whether quotes_ok is per label row or for the whole reply "
-    "is not said; question journalled 2026-11-02"
-)
-def test_label_object_quotes_ok_scope():
-    """A quote outside the text in one item: quotes_ok of the other rows."""
+def test_model_served_of_sides_with_one_null(tmp_path, key_env):
+    workflow, prompt_id = live(tmp_path, sides_writer)
+    # Plan order RED, GREEN, BLUE; per unit pos then neg.
+    served = [("m-a", None), (None, None), ("m-b", "m-a")]
+    fingerprints = [(None, "f1"), (None, None), ("f2", "f2")]
+    script = [
+        chat(
+            "Y",
+            served=served[n // 2][n % 2],
+            fp=fingerprints[n // 2][n % 2],
+            tin=3 + n,
+            tout=1,
+        )
+        for n in range(6)
+    ]
+    endpoint = Endpoint(lambda p, n: script[n])
+    [result] = tagger.run(workflow, transport=endpoint.transport)
+    assert endpoint.users()[:2] == [
+        "Text: Green tea\nGood for Red?",
+        "Text: Green tea\nBad for Red?",
+    ]
+    schema = {
+        "id": pl.String,
+        "code": pl.String,
+        "repeat": pl.Int64,
+        **CALL,
+        "pos_label": pl.String,
+        "neg_label": pl.String,
+        "pos_retried": pl.Boolean,
+        "neg_retried": pl.Boolean,
+        "pos_tokens_in": pl.Int64,
+        "pos_tokens_out": pl.Int64,
+        "neg_tokens_in": pl.Int64,
+        "neg_tokens_out": pl.Int64,
+        **TOKENS,
+        "parse_failure": pl.Boolean,
+    }
+    rows = [
+        (
+            "a1",
+            "BLUE",
+            1,
+            "m1",
+            "m-a|m-b",
+            "f2",
+            prompt_id,
+            "Y",
+            "Y",
+            False,
+            False,
+            7,
+            1,
+            8,
+            1,
+            15,
+            2,
+            False,
+        ),
+        (
+            "a1",
+            "GREEN",
+            1,
+            "m1",
+            None,
+            None,
+            prompt_id,
+            "Y",
+            "Y",
+            False,
+            False,
+            5,
+            1,
+            6,
+            1,
+            11,
+            2,
+            False,
+        ),
+        (
+            "a1",
+            "RED",
+            1,
+            "m1",
+            "m-a",
+            "f1",
+            prompt_id,
+            "Y",
+            "Y",
+            False,
+            False,
+            3,
+            1,
+            4,
+            1,
+            7,
+            2,
+            False,
+        ),
+    ]
+    expect(pl.read_parquet(result.output), schema, rows)
+    manifest = json.loads(
+        (tmp_path / "runs" / "wf" / "p" / "m1" / "manifest.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    # A null is counted under "" (contract 9).
+    assert manifest["models_served"] == {"m-a": 2, "m-b": 1, "": 3}
+    assert manifest["system_fingerprints"] == {"f1": 1, "f2": 2, "": 3}
 
 
-@pytest.mark.skip(
-    reason="contract 4.5 and 8.2: the columns and dtypes written for the fields of "
-    "an answer model (Literal, Quote, int with bounds, nested models) are not "
-    "given; question journalled 2026-11-02"
-)
-def test_answer_model_columns():
-    """Columns and dtypes of a table read through an answer model."""
-
-
-@pytest.mark.skip(
-    reason="contract 8.2: how model_served is joined when one call of a row gives "
-    "no model and another does, and how a null counts in models_served (9); "
-    "question journalled 2026-11-02"
-)
-def test_model_served_of_sides_with_one_null():
-    """A question with sides, one side answered without `model`."""
+@pytest.mark.parametrize("value", ["", 7, ["m"]])
+def test_model_served_must_be_a_non_empty_string(tmp_path, key_env, value):
+    workflow, _ = live(tmp_path, score_writer)
+    body = chat('{"RED": 1, "GREEN": 2, "BLUE": 3}', served=None)
+    body["model"] = value
+    body["system_fingerprint"] = value
+    table, _ = run_with(tmp_path, workflow, lambda p, n: body)
+    assert table["model_served"].to_list() == [None, None, None]
+    assert table["system_fingerprint"].to_list() == [None, None, None]

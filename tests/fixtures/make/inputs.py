@@ -147,14 +147,14 @@ def token_body(content, entries, served, fp, *, tin, tout=1, finish="length"):
 
 
 def served_of(body):
-    """(model served, fingerprint) of a body as the contract reads them (4.1)."""
+    """(model served, fingerprint) of a body as the contract reads them: non-empty strings (4.1)."""
     if not isinstance(body, dict):
         return None, None
     model = body.get("model")
     fp = body.get("system_fingerprint")
     return (
-        model if isinstance(model, str) else None,
-        fp if isinstance(fp, str) else None,
+        model if isinstance(model, str) and model else None,
+        fp if isinstance(fp, str) and fp else None,
     )
 
 

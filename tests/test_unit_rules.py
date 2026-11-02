@@ -490,10 +490,21 @@ def test_cross_needs_combine_with_several_models(tmp_path):
         tagger.load_workflow(path)
 
 
-def test_cross_positive_must_be_letters_of_the_source(tmp_path):
-    path = cross_project(tmp_path, adt_positive=("E", "Q"))
+@pytest.mark.parametrize(
+    "positive", [("E", "Q"), ("E", "E"), (), ("e",), ("Other",)], ids=repr
+)
+def test_cross_positive_must_be_letters_of_the_source(tmp_path, positive):
+    path = cross_project(tmp_path, adt_positive=positive)
     with pytest.raises(tagger.WorkflowError):
         tagger.load_workflow(path)
+
+
+@pytest.mark.parametrize(
+    "positive", [("OTHER",), ("T", "OTHER"), ("N", "M", "T", "A", "E", "OTHER")]
+)
+def test_cross_positive_may_name_other(tmp_path, positive):
+    """Contract 5: each item a letter of the source question or "OTHER"."""
+    tagger.load_workflow(cross_project(tmp_path, adt_positive=positive))
 
 
 def test_cross_side_from_a_pass_of_another_list(tmp_path):

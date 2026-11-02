@@ -17,12 +17,16 @@ import pytest
 from conftest import (
     FIXTURES,
     KEY_VALUE,
+    SCORE_BLOCKS,
+    YN_BLOCKS,
     Endpoint,
     chat,
+    contract_run_id,
     model_entry,
     never_called,
     read_json,
     score_question,
+    sha12,
     write_texts,
     write_workflow,
     yn_question,
@@ -249,10 +253,37 @@ def test_key_never_in_the_error_message(tmp_path, key_env, no_backoff):
     assert KEY_VALUE not in str(info.value)
 
 
-@pytest.mark.skip(
-    reason="contract 3.6: the value of `readout` in the run id (the name, or the "
-    "name with its layout or form) and the `top_logprobs` and `response_format` "
-    "of letter_text and json_object are not spelled out; question journalled 2026-11-02"
-)
-def test_run_id_exact_value():
-    """The run id equals the contract formula computed from the resolved settings."""
+@pytest.mark.parametrize("case", sorted(WIRE))
+def test_run_id_exact_value(tmp_path, key_env, case):
+    """Contract 3.6: the run id of the 19-key record, here from the earlier request."""
+    fixture = WIRE[case]
+    fields = fixture["fields"]
+    workflow = tagger.load_workflow(project(tmp_path, case))
+    [result] = tagger.run(
+        workflow, transport=Endpoint(lambda p, n: fixture["body"]).transport
+    )
+    blocks = SCORE_BLOCKS if case == "score_json" else YN_BLOCKS
+    record = {
+        "prompt_ids": {"": "tq-" + sha12(blocks["SYS"] + "\n" + blocks["USR"])},
+        "readout": "letter_text" if case.startswith("letter_text") else case,
+        "model": "m1",
+        "seed": 7,
+        "temperature": 0.0,
+        "max_tokens": fields["max_tokens"],
+        "top_logprobs": fields.get("top_logprobs"),
+        "response_format": fields.get("response_format"),
+        "extra_body": fields["extra_body"],
+        "reasoning": "on" if case == "letter_text_thinking" else "off",
+        "null_text": "",
+    }
+    if case != "score_json":
+        record["letters"] = ["Y", "N"]
+    if case == "letter_logprob":
+        record.update(spelling="sum", extraction="first_token")
+    if case.startswith("letter_text"):
+        record["layout"] = "single"
+    expected = contract_run_id(**record)
+    assert pl.read_parquet(result.output)["run_id"].unique().to_list() == [expected]
+    work = tmp_path / "runs" / "wf" / "p" / "m1"
+    assert json.loads((work / "run.json").read_text("utf-8"))["run_id"] == expected
+    assert json.loads((work / "manifest.json").read_text("utf-8"))["run_id"] == expected

@@ -275,6 +275,32 @@ def test_retry_max_tokens_must_be_above_max_tokens(tmp_path, max_tokens, retry):
     refused(write_workflow(tmp_path, body))
 
 
+@pytest.mark.parametrize(
+    ("pass_id", "lines"),
+    [
+        ("p", "top_logprobs = 5"),
+        ("p", "retry_max_tokens = 100"),
+        ("yn", "retry_max_tokens = 10"),
+        ("yn", "top_logprobs = 21"),
+    ],
+)
+def test_budgets_a_readout_does_not_take(tmp_path, pass_id, lines):
+    """Contract 11: a `budgets` key the readout does not take (p score_json, yn letter_logprob)."""
+    path = project(tmp_path)
+    marker = 'units = { rule = "all" }\n' if pass_id == "p" else "at_least = 0.2 }\n"
+    refused(edit(path, marker, marker + f"\n[passes.budgets.m1]\n{lines}\n"))
+
+
+def test_budgets_the_readout_takes(tmp_path):
+    path = project(tmp_path)
+    edit(
+        path,
+        "at_least = 0.2 }\n",
+        "at_least = 0.2 }\n\n[passes.budgets.m1]\nmax_tokens = 2\ntop_logprobs = 0\n",
+    )
+    tagger.load_workflow(path)
+
+
 def test_retry_max_tokens_in_a_question_must_be_above_max_tokens(tmp_path):
     write_texts(tmp_path)
     yn_question(
@@ -286,7 +312,7 @@ def test_retry_max_tokens_in_a_question_must_be_above_max_tokens(tmp_path):
         model_entry()
         + '[[passes]]\nid = "yn"\nquestion_dir = "yn"\nmodels = ["m1"]\nunits = { rule = "all" }\n'
     )
-    with pytest.raises((tagger.QuestionError, tagger.WorkflowError)):
+    with pytest.raises(tagger.QuestionError):
         tagger.load_workflow(write_workflow(tmp_path, body))
 
 
@@ -591,9 +617,9 @@ def test_env_file_setting(tmp_path, monkeypatch):
 
 
 def test_load_needs_exactly_one_of_path_and_preset(tmp_path):
-    with pytest.raises((tagger.WorkflowError, TypeError, ValueError)):
+    with pytest.raises(tagger.WorkflowError):
         tagger.load_workflow()
-    with pytest.raises((tagger.WorkflowError, TypeError, ValueError)):
+    with pytest.raises(tagger.WorkflowError):
         tagger.load_workflow(project(tmp_path), preset="protocol-v1")
 
 
@@ -633,12 +659,22 @@ def test_a_check_against_the_texts_happens_before_any_call(tmp_path, key_env):
 PRESETS = PACKAGE / "presets"
 
 
-def contract_example() -> dict:
-    """The TOML of contract 7.4, read from docs/contract.md."""
+def contract_toml(section: str) -> list[dict]:
+    """The TOML blocks of a section of docs/contract.md, parsed."""
     text = CONTRACT.read_text(encoding="utf-8")
-    section = text.split("### 7.4 ", 1)[1].split("### 7.5 ", 1)[0]
-    [block] = re.findall(r"```toml\n(.*?)```", section, flags=re.DOTALL)
-    return tomllib.loads(block)
+    body = text.split(f"### {section} ", 1)[1].split("\n### ", 1)[0]
+    return [
+        tomllib.loads(b)
+        for b in re.findall(r"```toml\n(.*?)```", body, flags=re.DOTALL)
+    ]
+
+
+def contract_presets() -> dict[str, dict]:
+    """Contract 7.5: the three preset files in full."""
+    [example] = contract_toml("7.4")
+    del example["run"]["texts"]  # no preset names texts
+    protocol, paper = contract_toml("7.5")
+    return {"protocol-v1": protocol, "protocol-v1-impact": example, "paper-v1": paper}
 
 
 def preset(name: str) -> dict:
@@ -651,72 +687,28 @@ def test_presets_ship_and_load(name):
     tagger.load_workflow(preset=name)
 
 
-def test_protocol_v1_impact_is_the_example_of_7_4():
-    assert preset("protocol-v1-impact") == contract_example()
+@pytest.mark.parametrize("name", ["protocol-v1", "protocol-v1-impact", "paper-v1"])
+def test_preset_is_the_file_of_the_contract(name):
+    assert preset(name) == contract_presets()[name]
 
 
-def test_protocol_v1_is_frozen_protocol():
-    data = preset("protocol-v1")
-    example = contract_example()
-    passes = data["passes"]
-    assert [p["question"] for p in passes] == [
-        "protocol_v1/sdg_pass1",
-        "protocol_v1/sdg_pass2",
-        "protocol_v1/adt_pass1",
-        "protocol_v1/adt_pass2",
-    ]
-    by_question = {p["question"]: p for p in passes}
-    for question, model in [
-        ("protocol_v1/sdg_pass1", "qwen3"),
-        ("protocol_v1/sdg_pass2", "qwen3"),
-        ("protocol_v1/adt_pass1", "gemma"),
-        ("protocol_v1/adt_pass2", "gemma"),
-    ]:
-        [entry] = by_question[question]["models"]
-        # What changes an answer, as frozen ([OA] docs/protocol-freeze-v1.md:19-21).
-        keys = (
-            "endpoint",
-            "model",
-            "seed",
-            "temperature",
-            "reasoning",
-            "reasoning_style",
-        )
-        assert {k: data["models"][entry].get(k) for k in keys} == {
-            k: example["models"][model][k] for k in keys
-        }
-        assert "extra_body" not in data["models"][entry]
-    for question, source in [
-        ("protocol_v1/sdg_pass2", "protocol_v1/sdg_pass1"),
-        ("protocol_v1/adt_pass2", "protocol_v1/adt_pass1"),
-    ]:
-        units = by_question[question]["units"]
-        assert units["rule"] == "threshold" and units["at_least"] == 0.25
-        assert units["from"] == by_question[source]["id"]
+def test_contract_presets_as_read():
+    """The blocks the preset test compares against are the ones meant (7.5)."""
+    presets = contract_presets()
+    assert presets["protocol-v1"]["run"]["name"] == "protocol-v1"
+    assert presets["paper-v1"]["run"]["name"] == "paper-v1"
+    assert presets["paper-v1"]["models"]["coder"]["reasoning_style"] == "omit"
+    assert all(p["budget_rule"] == "length" for p in presets["paper-v1"]["passes"])
+    for data in presets.values():
+        assert not {"texts", "output_dir", "env_file"} & set(data["run"])
+        assert all("expect_model" not in m for m in data["models"].values())
 
 
-def test_paper_v1_preset():
-    data = preset("paper-v1")
-    passes = {p["id"]: p for p in data["passes"]}
-    assert list(passes) == ["paper_adt", "paper_sdg", "paper_impact"]
-    assert passes["paper_adt"]["question"] == "paper/adt_v1"
-    assert passes["paper_sdg"]["question"] == "paper/sdg_v1"
-    assert passes["paper_impact"]["question"] == "paper/impact_v1"
-    assert passes["paper_adt"]["units"] == {"rule": "all"}
-    assert passes["paper_sdg"]["units"] == {"rule": "all"}
-    impact = passes["paper_impact"]
-    assert impact["budget_rule"] == "length"
-    assert impact["units"]["rule"] == "cross"
-    assert impact["units"].get("agreed_first", False) is False
-    for side, source in (("a", "paper_adt"), ("b", "paper_sdg")):
-        assert impact["units"][side]["from"] == source
-        assert impact["units"][side]["combine"] == "union"
-        assert sorted(impact["units"][side]["models"]) == ["coder", "gemma"]
-    for p in passes.values():
-        assert sorted(p["models"]) == ["coder", "gemma"]
-        assert p["attempts"] == 4
-    assert data["models"]["gemma"]["reasoning"] == "on"
-    assert data["models"]["gemma"]["reasoning_style"] == "enable_thinking"
-    assert data["models"]["coder"]["reasoning"] == "on"
-    for entry in data["models"].values():
-        assert entry["timeout_s"] == 1800.0
+@pytest.mark.parametrize("name", ["protocol-v1", "protocol-v1-impact", "paper-v1"])
+def test_preset_needs_texts_from_the_caller(tmp_path, monkeypatch, name):
+    """No preset names texts: a run without the argument is refused (10.1)."""
+    monkeypatch.chdir(tmp_path)
+    workflow = tagger.load_workflow(preset=name)
+    with pytest.raises(tagger.TextsError):
+        tagger.run(workflow, replay=True, transport=Endpoint(never_called).transport)
+    assert list(tmp_path.iterdir()) == []

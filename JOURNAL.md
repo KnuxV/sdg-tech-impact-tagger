@@ -90,3 +90,36 @@ named.
     system or user text"). Only a marker in a block is tested.
 19. 5: `positive = ["OTHER"]` is taken as allowed ("OTHER counts only if
     listed") though OTHER is not a letter of the source question.
+
+## 2026-11-02 17:52  The tests follow the contract clarifications (D019)
+Done: tightened the tests to docs/contract.md section 13. The five skipped
+tests now run with exact expectations. The run id is checked against the two
+values of 3.6 (run-5295f828ba65, run-da78be5306bb, both reproduced from the
+19-key record by `conftest.contract_run_id`) and by the formula for the
+other letter passes of 7.4, the four wire cases, the table and retry
+letter_text, and label_object with declared fields or an answer model.
+quotes_ok is per label row. The answer-model columns and types are checked.
+model_served is checked over sides with a null, and models_served counts
+nulls under "". units_sha256 is exact at level work, for threshold units
+and for cross units. Exception types are now single, per 3.3, 4.5, 10.1
+and 11. question_files is exact. `prompt` output is exact, sides included.
+The three presets are compared in full with 7.5 (protocol-v1-impact is 7.4
+without texts). New tests: render at list levels and its refusals,
+manifest counts and file format, positive OTHER allowed, `[[OPEN` in
+blocks and any label's material refused at load and in a work's text sent
+as it is, retry_max_tokens and top_logprobs refused where the readout has
+no use for them, budgets keys checked per readout, and restrictions that
+name nothing refused. `served_of` in the fixture scripts now reads an empty
+string as null (4.1). The fixtures regenerate byte-identical. No
+clarification contradicts a frozen fixture: the paper cache was already
+made with coder sending no thinking flag and the label passes retried
+under the length rule.
+`uv run pytest -q`: 616 collected, 554 failed and 60 errors on the missing
+package, 2 passed, none skipped.
+Tests added: 74 (questions 124, readouts 112, workflow 118, unit_rules 61,
+runs 59, replay_protocol 43, command 30, cache_and_wire 24, client 17,
+lists 14, replay_paper 14).
+Open / unsure: one type is still not named. The contract does not say
+whether a source with repeats > 1 is refused as WorkflowError or as
+UnitsError (5), so test_cross_source_with_repeats_is_refused accepts
+either.

@@ -95,17 +95,24 @@ def test_shipped_question_attributes(name, level, readout):
 
 
 def test_shipped_question_files_are_listed_in_sha256sums():
-    listed = set()
-    for line in (QUESTIONS / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
-        listed.add(line.split("  ", 1)[1])
+    """Contract 3.1: one line per file under questions/<family>/<name>/, none for the root files."""
+    import hashlib
+
+    lines = (QUESTIONS / "SHA256SUMS").read_text(encoding="utf-8").splitlines()
+    listed = {}
+    for line in lines:
+        digest, path = line.split("  ", 1)
+        assert path not in listed, path
+        listed[path] = digest
     on_disk = {
-        str(p.relative_to(QUESTIONS))
+        p.relative_to(QUESTIONS).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in QUESTIONS.rglob("*")
-        if p.is_file() and p.name not in {"SHA256SUMS"} and "__pycache__" not in p.parts
+        if p.is_file()
+        and len(p.relative_to(QUESTIONS).parts) >= 3
+        and "__pycache__" not in p.parts
     }
-    # Contract 3.1: every file under questions/ is in questions/SHA256SUMS,
-    # the question.toml files included once they ship.
-    assert on_disk <= listed | {"IDS.tsv"}
+    assert listed == on_disk
+    assert "SHA256SUMS" not in listed and "IDS.tsv" not in listed
     for name in SHIPPED:
         assert f"{name}/question.toml" in listed
 
@@ -135,6 +142,115 @@ def test_render_null_text_default_is_empty():
     with_none = question.render({"title": "T", "abstract": None})
     with_empty = question.render({"title": "T", "abstract": ""})
     assert with_none == with_empty
+
+
+# --------------------------------------------------------------------------
+# render (10.1)
+# --------------------------------------------------------------------------
+
+
+def test_render_at_a_list_level_without_units_is_empty():
+    question = tagger.load_question("protocol_v1/sdg_pass2")
+    assert question.render({"title": "T", "abstract": "A"}) == []
+    assert question.render({"title": "T", "abstract": "A"}, []) == []
+
+
+def test_render_with_sides_gives_one_call_per_side_per_unit():
+    question = tagger.load_question("impact/p3_2")
+    units = [("AI", "SDG-07"), ("ROBOTICS", "SDG-13")]
+    calls = question.render({"title": "T", "abstract": "A"}, units)
+    assert len(calls) == 4
+    one = [question.render({"title": "T", "abstract": "A"}, [u]) for u in units]
+    assert calls == one[0] + one[1]
+
+
+@pytest.mark.parametrize(
+    ("name", "units"),
+    [
+        ("protocol_v1/sdg_pass1", [("SDG-01",)]),
+        ("protocol_v1/sdg_pass2", [("SDG-01", "AI")]),
+        ("protocol_v1/sdg_pass2", [()]),
+        ("protocol_v1/sdg_pass2", [("SDG-18",)]),
+        ("protocol_v1/sdg_pass2", [("AI",)]),
+        ("impact/p3_2", [("AI",)]),
+        ("impact/p3_2", [("SDG-07", "AI")]),
+    ],
+)
+def test_render_refuses_a_bad_unit(name, units):
+    question = tagger.load_question(name)
+    with pytest.raises(tagger.UnitsError):
+        question.render({"title": "T", "abstract": "A"}, units)
+
+
+def test_render_refuses_a_missing_field():
+    question = tagger.load_question("protocol_v1/sdg_pass1")
+    with pytest.raises(tagger.TextsError):
+        question.render({"title": "T"})
+
+
+# --------------------------------------------------------------------------
+# the [[OPEN marker (3.4)
+# --------------------------------------------------------------------------
+
+
+def open_question(directory, *, blocks, fill_user, id_blocks=None, extra=""):
+    write_question(
+        directory,
+        blocks=blocks,
+        fill_user=fill_user,
+        fields=["title"],
+        readout_table='schema_name = "s"',
+        lists=ADT,
+        id_blocks=id_blocks,
+        extra=extra,
+    )
+
+
+@pytest.mark.parametrize(
+    "case",
+    ["system", "user", "block fill", "id block only"],
+)
+def test_open_marker_in_a_block_is_refused(tmp_path, case):
+    marked = "Draft [[OPEN: wording]]"
+    blocks = {"SYS": "Score.", "USR": "Text: {title}", "NOTE": "Plain."}
+    fill = {"title": "text:title"}
+    id_blocks = None
+    if case == "system":
+        blocks["SYS"] = marked
+    elif case == "user":
+        blocks["USR"] = "Text: {title} " + marked
+    elif case == "block fill":
+        blocks["USR"] = "Text: {title}\n{note}"
+        blocks["NOTE"] = marked
+        fill["note"] = "block:NOTE"
+    else:
+        blocks["NOTE"] = marked
+        id_blocks = ["SYS", "USR", "NOTE"]
+    open_question(tmp_path / "q", blocks=blocks, fill_user=fill, id_blocks=id_blocks)
+    with pytest.raises(tagger.QuestionError):
+        tagger.load_question(tmp_path / "q")
+
+
+def test_open_marker_in_an_unread_block_is_not_refused(tmp_path):
+    blocks = {"SYS": "Score.", "USR": "Text: {title}", "NOTE": "Draft [[OPEN]]"}
+    open_question(tmp_path / "q", blocks=blocks, fill_user={"title": "text:title"})
+    tagger.load_question(tmp_path / "q")
+
+
+def test_open_marker_in_the_material_of_any_label_is_refused(tmp_path):
+    # The marker sits in a label no unit asks about: refused all the same.
+    material_question(
+        tmp_path / "q",
+        block_file({**GOOD_MATERIAL, "BLOCKCHAIN": "Ledgers\n\nThey record [[OPEN]]."}),
+    )
+    refused(tmp_path / "q")
+
+
+def test_open_marker_in_a_work_is_rendered(tmp_path):
+    score_question(tmp_path / "q", lists=ADT)
+    question = tagger.load_question(tmp_path / "q")
+    [(_, user)] = question.render({"title": "[[OPEN", "abstract": "x"})
+    assert user == "Text: [[OPEN\nx"
 
 
 # --------------------------------------------------------------------------
