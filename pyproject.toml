@@ -33,6 +33,9 @@ classifiers = [
     "Topic :: Text Processing :: Linguistic",
 ]
 
+[project.scripts]
+sdg-tech-impact-tagger = "sdg_tech_impact_tagger.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/KnuxV/sdg-tech-impact-tagger"
 Repository = "https://github.com/KnuxV/sdg-tech-impact-tagger"
