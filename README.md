@@ -1,9 +1,7 @@
 # sdg-tech-impact-tagger
 
 [![PyPI](https://img.shields.io/pypi/v/sdg-tech-impact-tagger)](https://pypi.org/project/sdg-tech-impact-tagger/)
-<!-- DOI badge, once the first release is on Zenodo:
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXXX)
--->
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23897908.svg)](https://doi.org/10.5281/zenodo.23897908)
 
 Label texts with an LLM behind any OpenAI-compatible endpoint: the UN Sustainable Development Goals (SDGs), advanced digital technologies (ADTs), the impact of a technology on a goal, or any other list of labels you write. Each question is a versioned set of prompt blocks identified by a hash, its prompt id. Questions are chained in a declarative workflow, one TOML file. Every call is cached with its raw answer, every row records the model the endpoint says answered, and a run can be rebuilt from its cache alone, without the network. The package ships the questions and workflows of earlier research runs, and rebuilds the tables of those runs row for row from their caches.
 
@@ -398,7 +396,8 @@ Not replayed:
 
 ## Credits and licences
 
-<!-- Once on Zenodo: Cite this package as: Michoud, K. sdg-tech-impact-tagger. Zenodo. <https://doi.org/10.5281/zenodo.XXXXXXXX> -->
+Cite this package as: Michoud, K. sdg-tech-impact-tagger. Zenodo. <https://doi.org/10.5281/zenodo.23897908> (all versions; version 0.1.0 is <https://doi.org/10.5281/zenodo.23897909>).
+
 `CITATION.cff` gives the citation of this package and of its sources in machine-readable form. `CREDITS.md` lists every source with its licence, and `LICENSE-DATA.md` says which licence covers which file.
 
 - Code: GNU GPL version 3 only (GPL-3.0-only, `LICENSE`).

@@ -3,6 +3,7 @@ message: "If you use this package, please cite it, and cite the sources of the t
 title: "sdg-tech-impact-tagger: labelling texts with SDGs, digital technologies and their impact through LLMs, by versioned questions"
 type: software
 version: "0.1.0"
+doi: 10.5281/zenodo.23897908
 license: GPL-3.0-only
 repository-code: "https://github.com/KnuxV/sdg-tech-impact-tagger"
 url: "https://github.com/KnuxV/sdg-tech-impact-tagger"
