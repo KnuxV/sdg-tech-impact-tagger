@@ -1041,7 +1041,9 @@ UNREADABLE_OBJECTS = {
     "integer not an integer": {**GOOD_ITEMS, "BLUE": item(rank=1.5)},
     "number not a number": {**GOOD_ITEMS, "BLUE": item(weight="0.5")},
     "item not an object": {**GOOD_ITEMS, "BLUE": "Y"},
-    "not an object": [GOOD_ITEMS],
+    # Read from the first "{" to the last "}" (4.5): two objects in a list leave
+    # "{...}, {...}", which does not load.
+    "two objects": [GOOD_ITEMS, GOOD_ITEMS],
 }
 
 

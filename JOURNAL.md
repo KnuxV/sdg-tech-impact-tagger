@@ -171,3 +171,24 @@ below 1 is a WorkflowError; workflow.json is written once the first
 model_changes in the manifest is computed from the call logs of every
 worker, in log order; `check` prints the run id of a pass whose sources
 are not on disk yet, with the sources it waits on in place of a count.
+
+## 2026-11-02 18:31  Two tests that contradicted the contract are fixed
+Done: checked the two failures the implementation session reported
+against docs/contract.md, not against the code; in both the implementer
+is right. (1) 4.5 reads a label_object reply from its first `{` to its
+last `}`, so `[{...}]` is the inner object and reads; the case is now two
+objects in a list, whose span `{...}, {...}` does not load. (2) 10.1 makes
+a missing source table a UnitsError; the default-budget-rule test now runs
+every pass, so the impact pass reaches the call the earlier cache lacks
+and raises CacheMiss. `uv run pytest -q`, slow included: 616 passed. The
+52 warnings are the ModelChangeWarnings the fixture answers cause on
+purpose.
+Tests added: none; two changed.
+Open / unsure: none of the implementer's choices in the entry of 18:19
+contradicts the contract. Three of them go beyond its text and are for
+Kevin to confirm. (a) A `passes` or `models` restriction naming any name
+not in the workflow is refused; 10.1 names only a restriction naming
+nothing. (b) Keys beyond the declared fields of a label_object item are
+ignored; 4.5 says each item holds every field with its type, while the
+schema it sends has additionalProperties false. (c) File flags are taken
+only at level work x list x list; 5 does not say.

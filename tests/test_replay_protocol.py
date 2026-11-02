@@ -649,8 +649,13 @@ def test_run_id_ignores_the_endpoint(tmp_path):
 def test_default_budget_rule_asks_a_call_the_earlier_rule_did_not(tmp_path):
     """Contract 4.4: a reply cut by the server below its budget is spent under the
     default rule only; the earlier cache has no such call, so replay misses."""
+    # Every pass runs, so the impact pass finds its sources (a missing source
+    # table is a UnitsError, 10.1) and reaches the call the cache lacks.
     with pytest.raises(tagger.CacheMiss):
-        only(tmp_path, workflow_text(impact_extra=""), ["impact"], ["coder"])
+        only(tmp_path, workflow_text(impact_extra=""), None)
+    assert not (
+        tmp_path / "runs" / "protocol-v1-impact" / "impact" / "coder.parquet"
+    ).exists()
 
 
 def test_recorded_prefix_writes_the_recorded_id(tmp_path):
