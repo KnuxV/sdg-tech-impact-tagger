@@ -123,3 +123,51 @@ Open / unsure: one type is still not named. The contract does not say
 whether a source with repeats > 1 is refused as WorkflowError or as
 UnitsError (5), so test_cross_source_with_repeats_is_refused accepts
 either.
+
+## 2026-11-02 18:19  Implementation of the package against the tests
+Done: wrote the package under src/ from docs/contract.md, against the
+committed tests, which were not edited. The ten question.toml files of
+Appendix A (impact/p2_reasoning a new directory), their lines in
+questions/SHA256SUMS (the lines of the imported files unchanged), the sdg
+and adt lists with lists/SHA256SUMS, and the three presets copied from 7.4
+and 7.5. Modules: blocks and the prompt id rule (every shipped id
+reproduced), questions (strict question.toml, filling, impact_work_v1),
+lists, client (cache key and file of [OA], retries, batches,
+expect_model, injectable transport), readouts, workflow (strict pydantic,
+every refusal of section 7 at load), units (all, threshold, cross, file),
+runner (chunks, claims, sub-chunks and attempts, budget retry batch, run
+id, run.json, combine, call logs, manifest, workflow.json) and the
+command with run, check, prompt and preset, installed by
+[project.scripts]. Ruff check and format clean.
+`uv run pytest -q`, slow included: 616 collected, 614 passed, 2 failed.
+Tests added: none (implementation session).
+Open / unsure: two tests disagree with the contract and are left failing.
+(1) test_readouts.py::test_label_object_one_bad_item_fails_the_reply[not
+an object] expects the reply `[{...}]` to be unreadable. Contract 4.5
+reads label_object replies from the first `{` to the last `}` ([WS]
+paper_pass.py:389-395, which does the same), so the span is the inner
+object, which holds every label with its fields, and the reply reads. A
+case that is not an object under that rule (a bare string, a number)
+would test what the case means; or the contract changes the reading.
+(2) test_replay_protocol.py::test_default_budget_rule_asks_a_call_the_
+earlier_rule_did_not runs passes=["impact"] alone in a fresh directory
+and expects CacheMiss. No protocol pass has written its table there, so
+the cross rule cannot read its sources; 10.1 says a missing source table
+is a UnitsError naming its path, which is what is raised. Run with every
+pass (passes=None, as test_recorded_prefix_writes_the_recorded_id does),
+the impact pass is reached and misses the cache as expected.
+Choices made where the contract is silent, none changing what a pass
+returns: a block name found in two files of one question is refused
+(QuestionError); a [readout] key the readout does not take is refused; a
+source pass with repeats > 1 is refused at load (WorkflowError) for
+threshold, cross and file flags; an item of a label_object reply may hold
+keys beyond the declared fields (they are ignored, as Pydantic ignores
+them for an answer model); file flags are taken only at level
+work x list x list; `--cache-dir` replaces [run].cache_dir and leaves a
+pass's [passes.cache_dirs] as written; a restriction naming any pass or
+model not in the workflow is refused, not only one naming nothing; limit
+below 1 is a WorkflowError; workflow.json is written once the first
+(pass, model) is planned, so a refusal before planning writes nothing;
+model_changes in the manifest is computed from the call logs of every
+worker, in log order; `check` prints the run id of a pass whose sources
+are not on disk yet, with the sources it waits on in place of a count.
