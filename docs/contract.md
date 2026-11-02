@@ -116,8 +116,10 @@ material for a new question (D004).
 
 `src/sdg_tech_impact_tagger/questions/<family>/<name>/` holds the prompt
 files as imported (only their fenced blocks count) and `question.toml`. A
-shipped question is never edited (AGENTS.md); every file under `questions/`
-is in `questions/SHA256SUMS`. A workflow may use a question directory of its
+shipped question is never edited (AGENTS.md); every file under
+`questions/<family>/<name>/` (`question.toml` included) has one line in
+`questions/SHA256SUMS`, as `<sha256>  <family>/<name>/<file>`; the two files
+at the root of `questions/`, `SHA256SUMS` and `IDS.tsv`, have none. A workflow may use a question directory of its
 own (`question_dir`, section 7.3) with the same layout.
 
 Shipped: `protocol_v1/{sdg_pass1, sdg_pass2, adt_pass1, adt_pass2}`,
@@ -156,7 +158,7 @@ Unknown keys are refused at every level (`QuestionError`).
 | `[question].recorded_ids` | list of strings | no | other ids under which earlier runs recorded this question (only the prefix differs, 3.5) |
 | `[question].status` | `"current"`, `"record"`, `"experimental"` | yes | shown in the manifest; D008, D009 |
 | `[lists].a`, `[lists].b` | list id | by level and readout | `a` for `work x list` and for readouts that cover a list; `a` and `b` for `work x list x list` |
-| `[text].fields` | list of field names | yes | the text fields the question uses, in this order (also the order of the joined text of a quote check, 4.4) |
+| `[text].fields` | list of field names | yes | the text fields the question uses, in this order (also the order of the joined text of a quote check, 4.5) |
 | `[blocks].files` | list of paths | yes | files read for blocks, relative to the question directory; may reach a sibling question with `../../<family>/<name>/<file>`, never outside `questions/` |
 | `[blocks].system`, `[blocks].user` | block name | yes | the system and user templates |
 | `[blocks.fill.system]`, `[blocks.fill.user]` | table placeholder to source | yes (may be empty) | what fills each placeholder (3.4) |
@@ -166,7 +168,7 @@ Unknown keys are refused at every level (`QuestionError`).
 | `[listing.<name>]` | table | no | a text rendered over a whole list (3.4) |
 | `[assembly].kind` | `"impact_work_v1"` | only with `per_call = "work"` | the user message of a work-level call (3.4) |
 | `[readout]` | table | yes | readout settings (section 4) |
-| `[budget]` | table | yes | `max_tokens` (int >= 1), `retry_max_tokens` (int > `max_tokens`, optional), `top_logprobs` (int, `letter_logprob` only, default 20) |
+| `[budget]` | table | yes | `max_tokens` (int >= 1), `retry_max_tokens` (int > `max_tokens`, optional, `letter_text` and `json_object` only), `top_logprobs` (int 0 to 20, `letter_logprob` only, default 20) |
 | `[id]` | table | yes | the prompt id rule (3.5) |
 
 Material, one entry per name, for the labels of list `a` or `b`:
@@ -178,6 +180,12 @@ Material, one entry per name, for the labels of list `a` or `b`:
 | `part` | `"whole"` (default), `"name"` (the first line), `"body"` (the lines after the first, which must be followed by one blank line; joined, then `strip("\n")`) | [OA] `adt_pass1.py:39-83` |
 | `file` + `json_path` + `key` | a JSON file, the key holding a mapping, and the mapping key per label (a format string, e.g. `"{json_key}"`) | [WS] `impact_pass.py:255-257, 296` |
 | `list_field` | instead of a file: the label's list field of that name | D004 |
+
+Also refused at load (`QuestionError`): `retry_max_tokens` on a
+`score_json` or `letter_logprob` question (neither had a budget retry, [OA]
+`sdg_pass1.py:248-297`, `adt_pass2.py:173-286`); `top_logprobs` on another
+readout; letters that are empty, repeated, not `[A-Za-z0-9]+`, equal once
+lower-cased, or `OTHER` (4.3).
 
 Refused at load (`QuestionError`), carried over from [OA]
 `adt_pass1.py:39-83`, `adt_pass2.py:70-102`: a block file read with
@@ -231,9 +239,15 @@ units of a `work x list x list` question ([WS] `paper_pass.py:327-384`,
    the side `neg` filled, and `""`. Then `"Return the JSON object."`. The
    parts are joined with `"\n"`.
 
-A question whose filled system or user text, or any material or listing it
-uses, contains `[[OPEN` is refused before any call (`QuestionError`), as
-[OA] `llm_passes.py:840-908, 1161-1167`.
+A question is refused at load (`QuestionError`, naming each place) when
+`[[OPEN` occurs in a block it reads by name (the system, user and side
+blocks, `block:` fills, `[assembly].preamble`, every block of `[id].blocks`)
+or in the material of any label of its lists, as [OA]
+`llm_passes.py:840-908, 1161-1167` checks the blocks and label texts it
+sends. The check covers every label, not only those a pass's units hold
+([OA] checked only those; no shipped file holds the marker). A work's own
+text is never checked: a work whose title or abstract holds `[[OPEN` is
+sent as it is.
 
 ### 3.5 Prompt id
 
@@ -262,7 +276,8 @@ At load, every computed id must equal `prompt_id` or `prompt_ids[code]`
 (`QuestionError` naming both), as [WS] `impact_pass.py:403-407` and
 `paper_pass.py:258-260` refuse a question whose id moved. A pass may set
 `prompt_prefix` (7.3) to write rows under another prefix; the resulting id
-must then be one of `recorded_ids`. This reproduces `p3.1-f72f01757eef`, the
+must then be one of `recorded_ids` (`WorkflowError` otherwise, raised by
+`load_workflow`). This reproduces `p3.1-f72f01757eef`, the
 id the [WS] test run of the impact question was recorded under before the
 prefix was a setting ([WS] `params.yaml:419-426`).
 
@@ -273,17 +288,51 @@ read two ways the ids `p2-ed1dd92de43c` and `p3-ed1dd92de43c`). Every row
 also carries
 
 ```
-run_id = "run-" + sha12(json.dumps({
-    "prompt_ids": {code: id} (or {"": id}), "readout": ..., "model": <name sent>,
-    "seed": ..., "temperature": ..., "max_tokens": ..., "retry_max_tokens": ... or None,
-    "top_logprobs": ... or None, "response_format": ... or None,
-    "extra_body": <keyed extra body, 6.3>, "reasoning": "off" | "on",
-    "spelling": ... or None, "extraction": ... or None, "null_text": ...,
-}, sort_keys=True, separators=(",", ":")))
+run_id = "run-" + sha12(json.dumps(record, sort_keys=True, separators=(",", ":")))
 ```
 
-computed per (pass, model). The endpoint is not in it (recorded in the
-manifest, as for the cache key, D013).
+computed per (pass, model), `json.dumps` with `ensure_ascii` at its default
+(true). `record` has exactly these 19 keys; "null" means JSON null:
+
+| key | value |
+|---|---|
+| `prompt_ids` | code to prompt id, after `prompt_prefix`, for every label of list `a` when the question has `prompt_ids`; else `{"": <prompt id>}` |
+| `readout` | the readout name, e.g. `"letter_text"` |
+| `layout` | `letter_text`: `"single"` or `"table"`; else null |
+| `form` | `json_object`: `"label_object"` or `"impact_pairs_v1"`; else null |
+| `letters` | `letter_logprob`, `letter_text`: the letter list in question order; else null |
+| `answer_schema` | `label_object`: the `<item>` schema of 4.5 (declared fields or answer model), whether or not it is sent; else null |
+| `model` | the model name sent |
+| `seed` | int |
+| `temperature` | float (`0.0`) |
+| `max_tokens` | the resolved first budget (7.3) |
+| `retry_max_tokens` | the resolved retry budget, or null |
+| `top_logprobs` | the value of the `single_token` cache key (`letter_logprob`: resolved, `letter_text` single: 0); null for a `chat` call |
+| `response_format` | the object sent, or null |
+| `extra_body` | the keyed extra body (6.3) |
+| `reasoning` | `"off"` or `"on"` |
+| `spelling` | `letter_logprob`: the pass's; else null |
+| `extraction` | `letter_logprob`: the model's; else null |
+| `budget_rule` | when `retry_max_tokens` is set: the pass's; else null |
+| `null_text` | the pass's |
+
+The endpoint, `repeats`, chunking, `attempts`, `timeout_s` and
+`concurrency` are not in it (the endpoint is recorded in the manifest, as
+for the cache key, D013).
+
+Two values, computed for this contract with a script. The impact pass of 7.4
+for `coder` hashes
+
+```
+{"answer_schema":null,"budget_rule":"tokens","extra_body":{"logprobs":false},"extraction":null,"form":null,"layout":"single","letters":["Y","N"],"max_tokens":6000,"model":"coder","null_text":"","prompt_ids":{"":"p3.2-f72f01757eef"},"readout":"letter_text","reasoning":"on","response_format":null,"retry_max_tokens":20000,"seed":42,"spelling":null,"temperature":0.0,"top_logprobs":0}
+```
+
+to `run-5295f828ba65`. Pass `adt_pass2` of 7.4 for `gemma` (`prompt_ids`
+the six ids of Appendix A, `letters` `["N","M","T","A","E"]`, `max_tokens`
+1, `retry_max_tokens` null, `top_logprobs` 20, `extra_body` `{}`,
+`reasoning` `"off"`, `spelling` `"sum"`, `extraction` `"first_token"`,
+`budget_rule` null, `null_text` `""`, every other key null as above) gives
+`run-da78be5306bb`.
 
 ## 4. Readouts
 
@@ -316,7 +365,7 @@ first choice is read. `tokens_in`, `tokens_out` are the usage counts. The
 content is `message.content`, `""` when null (chat kind).
 
 **Model served.** `body["model"]` and `body["system_fingerprint"]` when they
-are strings, else null (D012).
+are non-empty strings, else null (D012).
 
 **OTHER.** The label of an unreadable answer is the string `OTHER`.
 
@@ -433,22 +482,42 @@ With `[readout].schema = true` the request carries
 ```
 
 with `<item>` = `{"type": "object", "properties": {<field>: <type schema>},
-"required": [fields in order], "additionalProperties": false}`, a letter
-being `{"type": "string", "enum": [letters]}` and a quote a string. From
-Python, an answer model (Pydantic, section 10) replaces the declared fields:
-`<item>` is its `model_json_schema()` with `additionalProperties: false` and
-every field required (an optional field is refused); each item is checked
-with `model_validate`.
+"required": [fields in order], "additionalProperties": false}` and the type
+schemas:
+
+| field type | type schema | column dtype (8.2) |
+|---|---|---|
+| `letter` | `{"type": "string", "enum": [letters in order]}` | String |
+| `string` | `{"type": "string"}` | String |
+| `quote` | `{"type": "string"}` | String |
+| `boolean` | `{"type": "boolean"}` | Boolean |
+| `integer` | `{"type": "integer"}` | Int64 |
+| `number` | `{"type": "number"}` | Float64 |
+
+From Python, an answer model (Pydantic, section 10) replaces the declared
+fields: `<item>` is its `model_json_schema()` with `"additionalProperties":
+false` added at its top level; each item is checked with `model_validate`.
+Its fields, in the model's field order, give one column each, named as the
+field, typed by the field's property in that schema: `"type": "string"`
+(with or without `enum`, a `Literal` of strings, or `Quote`) String,
+`"boolean"` Boolean, `"integer"` Int64, `"number"` Float64. A field with
+another schema (array, object, `$ref`, `anyOf`, a nullable or a default
+value) or not in `required` is refused (`QuestionError`, raised by `run`
+before any call); so is an answer model for a pass that is not a
+`label_object` pass or not in the workflow (`WorkflowError`). The fields
+annotated `Quote` are the quote fields.
 
 Reading: the text from the first `{` to the last `}` of the content
 ([WS] `paper_pass.py:389-395`), `json.loads`, an object whose keys are
 exactly the `json_key`s, each item holding every field with its type. One
 item that fails makes the whole reply unreadable: every label's field
 columns null, `quotes_ok` null, `parse_failure` true. A quote field is
-checked, never rejected: `quotes_ok` is true when every quote that is not
-empty after `strip()` is a substring of the joined text, the question's
-text fields in `[text].fields` order joined with `"\n"` (nulls as
-`null_text`).
+checked, never rejected. `quotes_ok` is per row, that is per label: true when
+every quote field of that label's item that is not empty after `strip()` is
+a substring of the joined text (the question's text fields in
+`[text].fields` order joined with `"\n"`, nulls as `null_text`); a label
+whose quotes are all empty is true. The `quotes_ok` column exists only when
+the item has a quote field.
 
 **`impact_pairs_v1`**, level `work x list x list`, `per_call = "work"`,
 assembly `impact_work_v1`, rows per unit ([WS] `paper_pass.py:387-416,
@@ -461,7 +530,11 @@ object whose only key is `pairs`, a list whose `pair` values are exactly
 `quotes_ok` = every `Y` answer's `<beneficial|detrimental>_quote` is a string,
 not empty after `strip()`, and a substring of the joined text. Unreadable:
 every unit `OTHER`, `OTHER`, `beneficial_kind` null, `quotes_ok` false,
-`parse_failure` true.
+`parse_failure` true. Each unit row carries the work call's `tokens_in`,
+`tokens_out` and `retried`, and `n_pairs`, the work's number of units
+([WS] `paper_pass.py:541-547`). The sides of this question only build the
+user text (3.4); its columns are those of its readout row in 8.2, not the
+per-side columns.
 
 ## 5. Unit rules
 
@@ -495,7 +568,8 @@ carries the source's score as `source_score`.
 (a pass whose rows carry one `label` per (id, code) of that list: a
 `letter_logprob` or `letter_text` pass without sides at level `work x list`,
 or a `letter_text` table pass), `models` (a non-empty list of that pass's
-models, or `"all"`), `positive` (non-empty, letters of the source question),
+models, or `"all"`), `positive` (non-empty, no repeat, each a letter of the
+source question or `"OTHER"`; anything else is a `WorkflowError`),
 `combine` (`"union"` or `"intersection"`, required when `models` has more
 than one entry, D011). A label is present for a source when that source has
 a row (id, code) with a label in `positive`; `OTHER` counts only if listed
@@ -691,7 +765,7 @@ If not, it is created with `O_EXCL` as
 | `prompt_id` or `prompt_ids` | as the question has it, after `prompt_prefix` |
 | `run_id` | 3.6 |
 | `texts_sha256` | `frame_digest(texts, ["id", *fields])`, nulls as `null_text` |
-| `units`, `units_sha256` | the planned units' count and `frame_digest` over their key columns, in plan order |
+| `units`, `units_sha256` | the planned units' count, and `frame_digest(units, ["id"])` at level `work`, `frame_digest(units, ["id", "code"])` at the list levels (`code` being `<a>|<b>` at `work x list x list`), over the units in plan order, once each whatever `repeats` ([OA] `llm_passes.py:1217`; [WS] `paper_pass.py:270, 487`) |
 | `unit_rule` | the resolved `units` table of the pass |
 | `chunk_size`, `repeats` | as resolved |
 
@@ -700,7 +774,9 @@ If not, it is created with `O_EXCL` as
 ([OA] `llm_passes.py:545-558`). `sub_chunk`, `attempts`, `concurrency`,
 `timeout_s` and the endpoint are not recorded: they do not change an answer
 ([WS] `docs/llm-passes-contract.md:470-473`). `combine_only` needs an
-existing `run.json` (`ManifestMismatch` otherwise).
+existing `run.json` (`ManifestMismatch` otherwise); it compares it, then
+combines (6.8). It makes no call and opens no cache, so it never reads the
+key, with or without `replay`.
 
 ### 6.8 Combine
 
@@ -879,7 +955,131 @@ Shipped as `src/sdg_tech_impact_tagger/presets/<name>.toml` (D009):
 |---|---|---|
 | `protocol-v1` | the four protocol passes, at 0.25 | as frozen: `qwen3` on the SDG passes, `gemma` on the ADT passes ([OA] `docs/protocol-freeze-v1.md:12-17`) |
 | `protocol-v1-impact` | the example of 7.4 | as there |
-| `paper-v1` (experimental) | `paper_adt` and `paper_sdg` (`all`), then `paper_impact` (`cross` over both models' paper labels, `union`, no `agreed_first`, `budget_rule = "length"`) | `coder` and `gemma` (reasoning on, style `enable_thinking`), budgets 16000/32000 and 32000/48000, `timeout_s` 1800, `attempts` 4 ([WS] `params.yaml:486-552`) |
+| `paper-v1` (experimental) | `paper_adt` and `paper_sdg` (`all`), then `paper_impact` (`cross` over both models' paper labels, `union`, no `agreed_first`); `budget_rule = "length"` on all three, as [WS] `paper_pass.py:218, 527` retried both | `coder` (reasoning on, style `omit`) and `gemma` (reasoning on, style `enable_thinking`), the questions' budgets for both, `timeout_s` 1800, `attempts` 4 ([WS] `params.yaml:486-552`) |
+
+Budgets are per (pass, model): `[passes.budgets.<model>]` sets them, and
+any key it leaves out is the question's `[budget]` value (`timeout_s`: the
+model entry's). The budgets of the [WS] paper run were the same for both
+models, so `paper-v1` uses the questions' (16000 and 32000 for the labels,
+32000 and 48000 for the impact question) and sets no `budgets`.
+
+The files, in full. `protocol-v1-impact.toml` is the file of 7.4 without its
+`texts` line. No preset names `texts` (given by `--texts` or the `texts`
+argument), `output_dir`, `env_file` or `expect_model`, so their defaults
+hold.
+
+`presets/protocol-v1.toml`, values of [WS] `params.yaml:17-86`:
+
+```toml
+[run]
+name = "protocol-v1"
+cache_dir = "cache"
+
+[models.qwen3]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "qwen3"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[models.gemma]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "gemma"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[[passes]]
+id = "sdg_pass1"
+question = "protocol_v1/sdg_pass1"
+models = ["qwen3"]
+units = { rule = "all" }
+
+[[passes]]
+id = "sdg_pass2"
+question = "protocol_v1/sdg_pass2"
+models = ["qwen3"]
+units = { rule = "threshold", from = "sdg_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
+
+[[passes]]
+id = "adt_pass1"
+question = "protocol_v1/adt_pass1"
+models = ["gemma"]
+units = { rule = "all" }
+
+[[passes]]
+id = "adt_pass2"
+question = "protocol_v1/adt_pass2"
+models = ["gemma"]
+units = { rule = "threshold", from = "adt_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
+```
+
+`presets/paper-v1.toml`, values of [WS] `params.yaml:486-552`:
+
+```toml
+[run]
+name = "paper-v1"
+cache_dir = "cache"
+
+[models.coder]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "coder"
+seed = 42
+temperature = 0.0
+reasoning = "on"
+reasoning_style = "omit"
+timeout_s = 1800.0
+concurrency = 8
+
+[models.gemma]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "gemma"
+seed = 42
+temperature = 0.0
+reasoning = "on"
+reasoning_style = "enable_thinking"
+timeout_s = 1800.0
+concurrency = 8
+
+[[passes]]
+id = "paper_adt"
+question = "paper/adt_v1"
+models = ["coder", "gemma"]
+units = { rule = "all" }
+attempts = 4
+budget_rule = "length"
+
+[[passes]]
+id = "paper_sdg"
+question = "paper/sdg_v1"
+models = ["coder", "gemma"]
+units = { rule = "all" }
+attempts = 4
+budget_rule = "length"
+
+[[passes]]
+id = "paper_impact"
+question = "paper/impact_v1"
+models = ["coder", "gemma"]
+attempts = 4
+budget_rule = "length"
+units = { rule = "cross", a = { from = "paper_adt", models = ["coder", "gemma"], positive = ["E", "A", "T", "M"], combine = "union" }, b = { from = "paper_sdg", models = ["coder", "gemma"], positive = ["Y"], combine = "union" } }
+```
+
+Its impact table carries the flags `adt_coder`, `adt_gemma`, `sdg_coder`,
+`sdg_gemma`, as [WS] `paper_impact_<model>.parquet` does.
 
 ## 8. Outputs
 
@@ -908,10 +1108,13 @@ Key columns:
 | `source_score` | Float64 | `threshold` |
 | `repeat` | Int64 | always (1 .. `repeats`) |
 
-Call columns: `model` (String, the name sent), `model_served` (String,
-null when not given; when a row stands on several calls that disagree, their
-distinct values sorted and joined with `|`), `system_fingerprint` (String,
-same rule), `prompt_id` (String), `run_id` (String).
+Call columns: `model` (String, the name sent), `model_served` (String),
+`system_fingerprint` (String), `prompt_id` (String), `run_id` (String). A
+row's `model_served` is taken over the calls it stands on (one, or one per
+side; a retried call counts as its retry only): the distinct non-null
+values, sorted, joined with `|`; null when every one is null. A null beside
+a value is dropped, so sides answered `m` and null give `m`.
+`system_fingerprint` follows the same rule.
 
 Readout columns:
 
@@ -924,7 +1127,8 @@ Readout columns:
 | `json_object` `label_object` | one column per field (`letter`, `string`, `quote` String; `boolean` Boolean; `integer` Int64; `number` Float64), `quotes_ok` Boolean (when a quote field exists), `retried`, `tokens_in`, `tokens_out`, `parse_failure` |
 | `json_object` `impact_pairs_v1` | `pos_label`, `neg_label`, `beneficial_kind` String, `quotes_ok` Boolean, `n_pairs` Int64, `retried`, `tokens_in`, `tokens_out`, `parse_failure` |
 
-A question with sides writes, in place of `label` .. `tokens_out`:
+A question with sides and `per_call = "unit"` writes, in place of `label` ..
+`tokens_out`:
 `<side>_label` for each side, then `<side>_p_<l>` (`letter_logprob`) or
 `<side>_retried` (`letter_text`) for each side, then `<side>_tokens_in`,
 `<side>_tokens_out` for each side, then `tokens_in`, `tokens_out` (the sums),
@@ -980,22 +1184,23 @@ read from the cache, in completion order: `cache_key`, `kind`, `cached`,
 (the [OA] `CallRecord`, `client.py:169-179`, never written there, plus the
 served model).
 
-`<output_dir>/<pass>/<model>/manifest.json`, rewritten at each combine:
+`<output_dir>/<pass>/<model>/manifest.json`, rewritten at each combine as
+`json.dumps(manifest, indent=2, sort_keys=True) + "\n"`:
 
 | key | value |
 |---|---|
 | `package_version`, `python_version` | |
 | `started_at`, `combined_at` | UTC ISO 8601: the creation of `run.json`, this combine |
 | `workflow`, `workflow_sha256` | name and the sha256 of the workflow file's bytes (or the preset's) |
-| `pass`, `question`, `question_status`, `question_files` | file path to sha256 for every file the question read |
+| `pass`, `question`, `question_status`, `question_files` | `question_files`: path to sha256 for every file the question read, `question.toml` included; a path as written in `question.toml` (material paths formatted per label, e.g. `sdg_pass2_v3/SDG-01.md`), relative to the question directory, `/`-separated, not normalised (`../../impact/p3_2/impact_p3_2.md` stays so) |
 | `lists` | list id to sha256 of its file |
 | `prompt_id` / `prompt_ids`, `run_id` | |
 | `model` | the resolved model entry: every key of 6.1 but the key's value (`api_key_env` only) |
 | `endpoint`, `cache_dir`, `replay` | |
 | `settings` | the resolved budgets, `spelling`, `budget_rule`, `null_text`, `repeats`, `chunk_size`, `sub_chunk`, `attempts` |
 | `texts_sha256`, `unit_rule`, `sources` | the unit rule and, per source, its path and file sha256 |
-| `counts` | `units`, `rows`, `parse_failures`, `retried`, from the table; `calls`, `cached_calls`, `fresh_calls`, `distinct_keys`, `tokens_in`, `tokens_out`, from the call logs |
-| `models_served`, `system_fingerprints` | value to number of calls |
+| `counts` | from the table: `units` (planned units), `rows`, `parse_failures` (rows whose `parse_failure` is true), `retried` (rows whose `retried` or any `<side>_retried` is true; 0 for readouts without one); from the call logs: `calls` (lines), `cached_calls`, `fresh_calls`, `distinct_keys`, `tokens_in`, `tokens_out` (sums) |
+| `models_served`, `system_fingerprints` | value to number of calls, over the call logs; a call whose value is null is counted under the key `""` (a served name is never empty, 4.1) |
 | `model_changes` | the warnings of 6.4, in order |
 
 `<output_dir>/workflow.json`: the resolved workflow (every default filled),
@@ -1019,8 +1224,26 @@ All importable from `sdg_tech_impact_tagger`.
 | `Quote` | `Annotated[str, ...]` | marks a quote field of an answer model |
 | `RunResult` | fields `pass_id`, `model`, `units`, `chunks`, `written`, `skipped_on_disk`, `skipped_claimed`, `missing` (lists of chunk indices), `output_written`, `output` (Path) | [OA] `llm_passes.py:1050-1068` |
 
+`Question.render` builds the calls of the given units of one work, from
+`texts` (field to value; a missing field is a `TextsError`), in call order:
+at level `work`, `units` must be empty and one call is returned (a `work`
+question has one call per work); at the list levels each unit is a tuple of
+codes, `(a,)` or `(a, b)`, and the result holds, per unit in the given order,
+one call per side in side order (one call without sides); with
+`per_call = "work"`, one call holding every given unit (3.4). Empty `units`
+at a list level gives `[]`. A unit of the wrong length or with a code not in
+its list is a `UnitsError`. Prompt ids are not checked by `render`.
+
+`run` refuses before any call: a worker name that is not
+`^[A-Za-z0-9_-]{1,64}$` (`WorkflowError`); `passes` or `models` naming
+nothing in the workflow (`WorkflowError`); an answer model of 4.5 that does
+not fit (`QuestionError` or `WorkflowError`, 4.5); no texts, neither the
+argument nor `[run].texts` (`TextsError`). `load_workflow` with neither or
+both of `path` and `preset`, or an unknown preset, raises `WorkflowError`.
+
 `texts` overrides `[run].texts`. `passes` and `models` restrict what is run
-(a pass not run must already have its output when another reads it). `limit`
+(a pass not run must already have its output when another reads it: a
+missing source table is a `UnitsError` naming its path). `limit`
 keeps the first `limit` works of the texts table for the whole run.
 `answer_models` gives, per pass id, the item model of a `label_object`
 question (4.5). `transport` replaces the network (tests use
@@ -1043,12 +1266,13 @@ sdg-tech-impact-tagger preset NAME
 |---|---|
 | `run` | `run(...)`; exactly one of `WORKFLOW`, `--preset`; prints one line per (pass, model) result |
 | `check` | loads the workflow, the questions, the lists and the texts, plans every pass whose sources exist, prints the prompt ids, run ids and unit counts; no call, no write |
-| `prompt` | prints the system and user text of one call with placeholder texts `<title>`, `<abstract>` (each field as `<field>`), as [OA] `llm_passes.py:911-950` |
+| `prompt` | prints every call of one unit, in call order (one per side, sides in order), with each text field filled as `<field>` (`<title>`, `<abstract>`); the unit's codes are `--a` and `--b`, by default the first label of each list. Each call is printed as [OA] `llm_passes.py:911-915`, `f"{header}\n\n--- system ---\n{system}\n\n--- user ---\n{user}\n"`, the calls separated by one empty line; `header` is `prompt <prompt id>`, then `, <a list id> <code>` and `, <b list id> <code>` at the list levels, then `, side <name>` with sides |
 | `preset` | prints the preset's TOML, to copy and edit |
 
 Exit status: 0 when every asked pass finished or waits on chunks of other
 workers; 1 on any `TaggerError` (message on standard error, never a key); 2
-on a usage error.
+on a usage error, which includes giving both or neither of `WORKFLOW` and
+`--preset`.
 
 ## 11. Errors
 
@@ -1057,11 +1281,11 @@ raised before the first call.
 
 | exception | raised when |
 |---|---|
-| `WorkflowError` | the workflow file: unknown or missing key, wrong type or value, unknown or later pass, unknown model, unfit rule, reserved `extra_body` key, `letter_logprob` with reasoning on (D006), missing `combine` (D011) |
-| `QuestionError` | a question: unknown key, missing file or block, repeated block, bad placeholder set, bad material, computed id not the expected one, `[[OPEN` marker |
+| `WorkflowError` | the workflow file: unknown or missing key, wrong type or value, unknown or later pass, unknown model, unfit rule, reserved `extra_body` key, `letter_logprob` with reasoning on (D006), missing `combine` (D011), a `positive` item not a letter nor `OTHER`, a `prompt_prefix` giving an id outside `recorded_ids`, a `budgets` key the readout does not take; `load_workflow` with neither or both of `path` and `preset`, or an unknown preset; a `run` argument: a bad worker name, `passes` or `models` naming nothing, an answer model for an unknown or unfit pass |
+| `QuestionError` | a question: unknown key, missing file or block, repeated block, bad placeholder set, bad material, bad letters, `retry_max_tokens` or `top_logprobs` on a readout without it, computed id not the expected one, `[[OPEN` marker in a block or material; an answer model with a field it cannot type (4.5) |
 | `ListError` | a list file (2.2) |
-| `TextsError` | the texts table (2.1) |
-| `UnitsError` | a unit rule: source checks, unscored works, file rows, works not in the texts, empty unit set |
+| `TextsError` | the texts table (2.1), no texts given, a field missing from `render`'s `texts` |
+| `UnitsError` | a unit rule: a missing source table, source checks, unscored works, file rows, works not in the texts, empty unit set; a bad unit given to `render` |
 | `KeyMissing` | the key variable is unset or empty (live run) |
 | `ManifestMismatch` | `run.json` differs, or is missing under `combine_only` |
 | `IncompleteRun` | combine with planned chunks missing |
@@ -1130,6 +1354,33 @@ Each is a design choice not settled by D001 to D015, with its alternative.
 52. Presets keep the Unistra endpoint and aliases as run; `preset NAME` prints one to edit. Alternative: presets with placeholders for endpoint and model names.
 53. Settled by D018: `protocol-v1` as frozen (qwen3 SDG, gemma ADT); `protocol-v1-impact` with both on every protocol pass, as [WS].
 54. Commands `check`, `prompt` and `preset` beside `run`. Alternative: `run` only.
+
+## 13. Clarifications of 2026-11-02
+
+The test-writing session of 2026-11-02 (JOURNAL.md) found 19 places where
+this contract was ambiguous or silent. Each now has one answer:
+
+| # | question | answered in |
+|---|---|---|
+| 1 | the exact input of the run id (`readout`, `top_logprobs`, `response_format`), with a value | 3.6 |
+| 2 | what `render` returns at a list level with no units | 10.1 |
+| 3 | whether `impact_pairs_v1` takes the per-side columns | 4.5, 8.2 |
+| 4 | `model_served` when one call of a row reports no model; a null in `models_served` | 4.1, 8.2, 9 |
+| 5 | the columns of `units_sha256` | 6.7 |
+| 6 | whether `question_files` lists `question.toml`, and its paths | 9 |
+| 7 | the exception for a `prompt_prefix` outside `recorded_ids` | 3.5, 11 |
+| 8 | which files under `questions/` are in `SHA256SUMS` | 3.1 |
+| 9 | the `protocol-v1` and `paper-v1` files, pass ids and client settings; whether budgets are per model | 7.5 |
+| 10 | what `counts.parse_failures` and `counts.retried` count | 9 |
+| 11 | `quotes_ok` per label row or per reply (`label_object`) | 4.5 |
+| 12 | the columns and dtypes of an answer model's fields | 4.5 |
+| 13 | the JSON Schema of each declared field type | 4.5 |
+| 14 | whether a `score_json` question may carry `retry_max_tokens` | 3.3 |
+| 15 | the exception for a bad worker name, bad letters, a missing source table, neither or both of path and preset, no texts, an optional answer-model field | 3.3, 4.5, 10.1, 10.2, 11 |
+| 16 | whether `combine_only` reads the key | 6.7 |
+| 17 | what `prompt` prints for a question with sides | 10.2 |
+| 18 | whether `[[OPEN` in a work's own text refuses the run | 3.4 |
+| 19 | whether `positive` may name `OTHER` | 5 |
 
 ## Appendix A. The shipped `question.toml` files
 
@@ -1520,9 +1771,9 @@ blocks = ["SYSTEM", "USER_TEMPLATE", "Q_POS", "Q_NEG"]
 The [DV] reasoning layer: the blocks of `impact/p2`, answered after
 reasoning, read from the message text ([DV] `labels_p3.py:1-7`, 219;
 `params.yaml:80-108`). Its earlier id is the P2 hash under the prefix `p3`.
-To replay [DV], the pass sets `budget_rule = "tokens"` and the model entries
-carry the [DV] budgets (coder 6000 and 20000, gemma 4000 and 12000, gpt-oss
-6000 and 20000).
+To replay [DV], the pass sets `budget_rule = "tokens"` and
+`[passes.budgets.<model>]` carries the [DV] budgets (coder 6000 and 20000,
+gemma 4000 and 12000, gpt-oss 6000 and 20000).
 
 ```toml
 [question]

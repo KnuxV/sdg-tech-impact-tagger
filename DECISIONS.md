@@ -146,3 +146,12 @@ stays as written.
 `protocol-v1` uses the models as frozen: qwen3 for SDG, gemma for ADT.
 `protocol-v1-impact` runs both models on every protocol pass, then P3.2, as
 in `wos_paper_sample`.
+
+## D019  Clarifications of the contract (2026-11-02)
+
+The test-writing session journalled 19 places where the contract was silent
+or ambiguous. Section 13 of `docs/contract.md` answers each, by the simplest
+rule consistent with the earlier code. Three answers correct the paper-v1
+preset to what `wos_paper_sample` ran: `coder` sends no thinking flag
+(style `omit`), the `length` budget rule applies to the three paper passes,
+and no preset names a texts file. No answer changes an earlier table.
