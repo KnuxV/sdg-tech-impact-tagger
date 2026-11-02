@@ -20,8 +20,8 @@ and leave a trace. You do not make design decisions.
 3. Run `uv run ruff check .`, `uv run ruff format --check .` and, once tests
    exist, `uv run pytest -q`. If one is not clean, report it and fix or ask
    before doing anything else.
-4. Run `sha256sum -c src/sdg_tech_impact_tagger/questions/SHA256SUMS` once
-   that file exists. If a shipped question file has changed, stop and report.
+4. Run `(cd src/sdg_tech_impact_tagger/questions && sha256sum -c SHA256SUMS)`.
+   If a shipped question file has changed, stop and report.
 5. State in one paragraph what you are about to do.
 
 ## Things you never do
