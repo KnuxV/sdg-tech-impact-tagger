@@ -349,7 +349,7 @@ class Client:
             },
             ensure_ascii=False,
         )
-        tmp.write_text(text, encoding="utf-8")
+        tmp.write_text(text, encoding="utf-8", newline="\n")
         os.replace(tmp, path)
 
     # -- the network -------------------------------------------------------

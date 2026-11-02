@@ -802,7 +802,7 @@ class PassRun:
         except FileExistsError:
             self.check_record(create=False)
             return
-        with os.fdopen(handle, "w", encoding="utf-8") as out:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as out:
             out.write(text)
 
     # -- answering ---------------------------------------------------------
@@ -908,7 +908,7 @@ class PassRun:
             except OSError:
                 return False
             return holder == worker
-        with os.fdopen(handle, "w", encoding="utf-8") as out:
+        with os.fdopen(handle, "w", encoding="utf-8", newline="\n") as out:
             out.write(worker)
         return True
 
@@ -1094,7 +1094,7 @@ class PassRun:
         text = json.dumps(manifest, indent=2, sort_keys=True) + "\n"
         path = self.work_dir / "manifest.json"
         partial = path.with_name("manifest.json.partial")
-        partial.write_text(text, encoding="utf-8")
+        partial.write_text(text, encoding="utf-8", newline="\n")
         os.replace(partial, path)
 
 
@@ -1219,7 +1219,9 @@ def write_workflow_record(
     path = workflow.output_dir / "workflow.json"
     partial = path.with_name(f"workflow.json.{os.getpid()}.partial")
     partial.write_text(
-        json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(record, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     os.replace(partial, path)
 
