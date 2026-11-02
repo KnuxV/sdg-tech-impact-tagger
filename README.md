@@ -359,7 +359,7 @@ Each field must be required and typed as a string (a `Literal` of strings includ
 - **Replay.** `run(..., replay=True)` or `run --replay` rebuilds a pass from its cache alone: no key is read, no request is made, and a call missing from the cache stops the pass with `CacheMiss`. Everything else (units, chunks, budget retries, combining) is as in a live run.
 - **The manifest.** Each (pass, model) writes `manifest.json`: the package and Python versions, the sha256 of the workflow, of every file the question read and of every list, the prompt id and run id, the resolved model entry (the name of the key variable, never its value), the endpoint, the budgets and settings, the sha256 of the texts, the unit rule and its sources, the counts (units, rows, parse failures, retries, calls from the cache and fresh, tokens) and the models served. `run.json` records what a run is; resuming it with other settings, texts or units is refused.
 
-**Replay of the earlier runs.** The tables of two earlier research repositories were rebuilt with this package from their own caches, read in place, and from the documents file each run read, in its order: `wos_paper_sample` (protocol v1, the impact question and the paper-level labels) and the recall sample of `open_alex_adt_gate` (protocol v1). Compared on (id, code), column by column (labels, scores, probabilities to 1e-12, source scores, flags, retries, tokens, parse failures, model, prompt id), all 20 tables are identical, with no row on one side only and no cache miss: every call was read from the cache.
+**Replay of the earlier runs.** The tables of three earlier research repositories were rebuilt with this package from their own caches, read in place, and from the documents file each run read, in its order: `wos_paper_sample` (protocol v1, the impact question and the paper-level labels), the recall sample of `open_alex_adt_gate` (protocol v1) and `divergence-validation` (`impact/p2` and `impact/p2_reasoning`). Compared column by column (labels, scores, probabilities to 1e-12, source scores, flags, retries, tokens, parse failures, model, prompt id), 22 of the 25 tables are identical and the other 3 differ on 2 rows each, in the count of output tokens only (below). No row is on one side only and no call missed the cache.
 
 | repository | table | model | rows, earlier and rebuilt |
 |---|---|---|---|
@@ -383,14 +383,20 @@ Each field must be required and typed as a string (a `Literal` of strings includ
 | | `adt_pass1` | gemma | 1,800,006 |
 | | `adt_pass2` | qwen3 | 39,941 |
 | | `adt_pass2` | gemma | 61,949 |
+| `divergence-validation` | `impact/p2` | gemma | 51,044 |
+| | `impact/p2` | mistral-small | 51,044 |
+| | `impact/p2_reasoning` | coder | 51,044 (2 differ in `tokens_out`) |
+| | `impact/p2_reasoning` | gemma | 51,044 (2 differ in `tokens_out`) |
+| | `impact/p2_reasoning` | gpt-oss | 51,044 (2 differ in `tokens_out`) |
 
 The impact pass read its budget retries from the cache too (53 for coder, 4,184 rows with a retry for gemma). The sha256 of the texts and of the units of every rebuilt run equal those the earlier runs recorded.
+
+The 6 rows that differ come from two works of `divergence-validation` with the same title and abstract and the same triple: their requests are identical, so they share one cache key. The earlier client asked both at once and kept each answer in its row, while the cache file kept only the last; a replay reads that one answer for both. Their labels agree; only `tokens_out` differs.
 
 Not replayed:
 
 - the paper-level impact tables of `wos_paper_sample`: they are built from the paper-level labels of both models, and gemma's paper-level label tables were not on the machine where the replay was run;
-- the impact tables of a third repository, `divergence-validation` (`impact/p2` and `impact/p2_reasoning`): its call caches are kept on a remote store and were not fetched to that machine;
-- by design, the `gpt-oss` rows of its single-token layer, which read a letter's logprob after reasoning: the package refuses `letter_logprob` with reasoning on, since a thinking model's first token is not its answer.
+- by design, the `gpt-oss` rows of the single-token layer of `divergence-validation` (51,044), which read a letter's logprob after reasoning: the package refuses `letter_logprob` with reasoning on, since a thinking model's first token is not its answer.
 
 ## Credits and licences
 
