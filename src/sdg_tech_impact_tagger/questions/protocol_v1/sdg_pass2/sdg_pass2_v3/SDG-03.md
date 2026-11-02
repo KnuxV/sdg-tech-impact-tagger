@@ -1,0 +1,50 @@
+# SDG pass 2, protocol v1: SDG 3, Good Health and Well-being
+
+What the SDG pass 2 question (`../sdg_pass2_v3.md`) tells the model about
+this goal. GOAL_SCOPE fills `{scope}`: the official title of the goal and,
+for some goals, a guidance paragraph. GOAL_TARGETS fills `{targets}`: the
+targets of the goal, one per line, as the target id, two spaces and the
+target's title. Neither block holds a brace.
+
+This goal has no guidance: GOAL_SCOPE holds the official title only.
+
+The official title and the target titles are the `title` fields of the UN
+Statistics Division SDG API (https://unstats.un.org/sdgapi), downloaded on
+2026-10-08, with runs of whitespace collapsed to one space.
+
+First run in `open_alex_adt_gate`. Status: frozen, protocol v1 (2026-10-08),
+revision 3. The goal's id has the prefix `sdggoal-03` and is listed in
+`../../../IDS.tsv`.
+
+Licence: the official title and the targets are those of the United Nations
+and keep their source's terms (`CREDITS.md`); the rest is CC BY 4.0
+(https://creativecommons.org/licenses/by/4.0/), see `LICENSE-DATA.md`.
+
+Only the fenced `text` blocks under the `## NAME` headings below count
+toward the prompt id; this header does not. The blocks are byte for byte
+those of the earlier runs and are never edited: a changed wording is a new
+question under a new name.
+
+## GOAL_SCOPE
+
+```text
+Official title: Ensure healthy lives and promote well-being for all at all ages
+```
+
+## GOAL_TARGETS
+
+```text
+3.1  By 2030, reduce the global maternal mortality ratio to less than 70 per 100,000 live births
+3.2  By 2030, end preventable deaths of newborns and children under 5 years of age, with all countries aiming to reduce neonatal mortality to at least as low as 12 per 1,000 live births and under-5 mortality to at least as low as 25 per 1,000 live births
+3.3  By 2030, end the epidemics of AIDS, tuberculosis, malaria and neglected tropical diseases and combat hepatitis, water-borne diseases and other communicable diseases
+3.4  By 2030, reduce by one third premature mortality from non-communicable diseases through prevention and treatment and promote mental health and well-being
+3.5  Strengthen the prevention and treatment of substance abuse, including narcotic drug abuse and harmful use of alcohol
+3.6  By 2020, halve the number of global deaths and injuries from road traffic accidents
+3.7  By 2030, ensure universal access to sexual and reproductive health-care services, including for family planning, information and education, and the integration of reproductive health into national strategies and programmes
+3.8  Achieve universal health coverage, including financial risk protection, access to quality essential health-care services and access to safe, effective, quality and affordable essential medicines and vaccines for all
+3.9  By 2030, substantially reduce the number of deaths and illnesses from hazardous chemicals and air, water and soil pollution and contamination
+3.a  Strengthen the implementation of the World Health Organization Framework Convention on Tobacco Control in all countries, as appropriate
+3.b  Support the research and development of vaccines and medicines for the communicable and non-communicable diseases that primarily affect developing countries, provide access to affordable essential medicines and vaccines, in accordance with the Doha Declaration on the TRIPS Agreement and Public Health, which affirms the right of developing countries to use to the full the provisions in the Agreement on Trade-Related Aspects of Intellectual Property Rights regarding flexibilities to protect public health, and, in particular, provide access to medicines for all
+3.c  Substantially increase health financing and the recruitment, development, training and retention of the health workforce in developing countries, especially in least developed countries and small island developing States
+3.d  Strengthen the capacity of all countries, in particular developing countries, for early warning, risk reduction and management of national and global health risks
+```
