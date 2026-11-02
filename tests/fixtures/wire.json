@@ -1,0 +1,305 @@
+[
+ {
+  "case": "score_json",
+  "fields": {
+   "model": "m1",
+   "system": "You score colours.",
+   "user": "Text: Red kite été {abstract}\n",
+   "seed": 7,
+   "temperature": 0.0,
+   "max_tokens": 50,
+   "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+     "name": "colour_scores",
+     "strict": true,
+     "schema": {
+      "type": "object",
+      "properties": {
+       "RED": {
+        "type": "integer"
+       },
+       "GREEN": {
+        "type": "integer"
+       },
+       "BLUE": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "RED",
+       "GREEN",
+       "BLUE"
+      ],
+      "additionalProperties": false
+     }
+    }
+   },
+   "extra_body": {},
+   "kind": "chat"
+  },
+  "key": "51a4c32500a24d4d57cd9d0706bc5972b0da082d6ae6c6531b32b8bf2498810f",
+  "repeat_2_key": "617b9187f4969c036adb204d489e44cb0b2a942fa40945add20fdaee8aa0bfc2",
+  "payload": {
+   "model": "m1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "You score colours."
+    },
+    {
+     "role": "user",
+     "content": "Text: Red kite été {abstract}\n"
+    }
+   ],
+   "temperature": 0.0,
+   "max_tokens": 50,
+   "seed": 7,
+   "response_format": {
+    "type": "json_schema",
+    "json_schema": {
+     "name": "colour_scores",
+     "strict": true,
+     "schema": {
+      "type": "object",
+      "properties": {
+       "RED": {
+        "type": "integer"
+       },
+       "GREEN": {
+        "type": "integer"
+       },
+       "BLUE": {
+        "type": "integer"
+       }
+      },
+      "required": [
+       "RED",
+       "GREEN",
+       "BLUE"
+      ],
+      "additionalProperties": false
+     }
+    }
+   }
+  },
+  "body": {
+   "id": "chatcmpl-fixture",
+   "object": "chat.completion",
+   "created": 1767225600,
+   "model": "m1-served",
+   "system_fingerprint": "fp-x",
+   "choices": [
+    {
+     "index": 0,
+     "message": {
+      "role": "assistant",
+      "content": "{\"RED\": 10, \"GREEN\": 0, \"BLUE\": 55}"
+     },
+     "finish_reason": "stop"
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 20,
+    "completion_tokens": 12,
+    "total_tokens": 32
+   }
+  },
+  "file_text": "{\"cache_key\": \"51a4c32500a24d4d57cd9d0706bc5972b0da082d6ae6c6531b32b8bf2498810f\", \"kind\": \"chat\", \"request\": {\"model\": \"m1\", \"system\": \"You score colours.\", \"user\": \"Text: Red kite été {abstract}\\n\", \"seed\": 7, \"temperature\": 0.0, \"max_tokens\": 50, \"response_format\": {\"type\": \"json_schema\", \"json_schema\": {\"name\": \"colour_scores\", \"strict\": true, \"schema\": {\"type\": \"object\", \"properties\": {\"RED\": {\"type\": \"integer\"}, \"GREEN\": {\"type\": \"integer\"}, \"BLUE\": {\"type\": \"integer\"}}, \"required\": [\"RED\", \"GREEN\", \"BLUE\"], \"additionalProperties\": false}}}, \"extra_body\": {}, \"kind\": \"chat\"}, \"response\": {\"id\": \"chatcmpl-fixture\", \"object\": \"chat.completion\", \"created\": 1767225600, \"model\": \"m1-served\", \"system_fingerprint\": \"fp-x\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"{\\\"RED\\\": 10, \\\"GREEN\\\": 0, \\\"BLUE\\\": 55}\"}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 20, \"completion_tokens\": 12, \"total_tokens\": 32}}}"
+ },
+ {
+  "case": "letter_logprob",
+  "fields": {
+   "model": "m1",
+   "system": "Answer Y or N.",
+   "user": "Text: Red kite été {abstract}\nColour: Blue\nY or N:",
+   "seed": 7,
+   "temperature": 0.0,
+   "max_tokens": 1,
+   "top_logprobs": 5,
+   "extra_body": {}
+  },
+  "key": "2ae2d1598a01e982079b730931eb548188f9c28d2f76feee0ca4800706905424",
+  "repeat_2_key": "dbb2a947768c64fe52e7b500638686deb24b8eb3b4013da9cc429e813a259355",
+  "payload": {
+   "model": "m1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Answer Y or N."
+    },
+    {
+     "role": "user",
+     "content": "Text: Red kite été {abstract}\nColour: Blue\nY or N:"
+    }
+   ],
+   "temperature": 0.0,
+   "max_tokens": 1,
+   "seed": 7,
+   "logprobs": true,
+   "top_logprobs": 5
+  },
+  "body": {
+   "id": "chatcmpl-fixture",
+   "object": "chat.completion",
+   "created": 1767225600,
+   "model": "m1-served",
+   "choices": [
+    {
+     "index": 0,
+     "message": {
+      "role": "assistant",
+      "content": "Y"
+     },
+     "finish_reason": "length",
+     "logprobs": {
+      "content": [
+       {
+        "token": "Y",
+        "logprob": -0.2,
+        "top_logprobs": [
+         {
+          "token": "Y",
+          "logprob": -0.2
+         },
+         {
+          "token": " N",
+          "logprob": -1.7
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 21,
+    "completion_tokens": 1,
+    "total_tokens": 22
+   }
+  },
+  "file_text": "{\"cache_key\": \"2ae2d1598a01e982079b730931eb548188f9c28d2f76feee0ca4800706905424\", \"kind\": \"single_token\", \"request\": {\"model\": \"m1\", \"system\": \"Answer Y or N.\", \"user\": \"Text: Red kite été {abstract}\\nColour: Blue\\nY or N:\", \"seed\": 7, \"temperature\": 0.0, \"max_tokens\": 1, \"top_logprobs\": 5, \"extra_body\": {}}, \"response\": {\"id\": \"chatcmpl-fixture\", \"object\": \"chat.completion\", \"created\": 1767225600, \"model\": \"m1-served\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"Y\"}, \"finish_reason\": \"length\", \"logprobs\": {\"content\": [{\"token\": \"Y\", \"logprob\": -0.2, \"top_logprobs\": [{\"token\": \"Y\", \"logprob\": -0.2}, {\"token\": \" N\", \"logprob\": -1.7}]}]}}], \"usage\": {\"prompt_tokens\": 21, \"completion_tokens\": 1, \"total_tokens\": 22}}}"
+ },
+ {
+  "case": "letter_text",
+  "fields": {
+   "model": "m1",
+   "system": "Answer Y or N.",
+   "user": "Text: Red kite été {abstract}\nColour: Blue\nY or N:",
+   "seed": 7,
+   "temperature": 0.0,
+   "max_tokens": 300,
+   "top_logprobs": 0,
+   "extra_body": {
+    "logprobs": false
+   }
+  },
+  "key": "5c4e95c22d4a6c24d8fc6644849097c3ab777e19731b40477f8c3a1fe2c40179",
+  "repeat_2_key": "95304200dfe3536e929ccfcf5de839b8f7f95c1d849e82c77f13e140c5807c8d",
+  "payload": {
+   "model": "m1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Answer Y or N."
+    },
+    {
+     "role": "user",
+     "content": "Text: Red kite été {abstract}\nColour: Blue\nY or N:"
+    }
+   ],
+   "temperature": 0.0,
+   "max_tokens": 300,
+   "seed": 7,
+   "logprobs": false,
+   "top_logprobs": 0
+  },
+  "body": {
+   "id": "chatcmpl-fixture",
+   "object": "chat.completion",
+   "created": 1767225600,
+   "model": "m1-served",
+   "system_fingerprint": "fp-x",
+   "choices": [
+    {
+     "index": 0,
+     "message": {
+      "role": "assistant",
+      "content": "N"
+     },
+     "finish_reason": "stop"
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 22,
+    "completion_tokens": 40,
+    "total_tokens": 62
+   }
+  },
+  "file_text": "{\"cache_key\": \"5c4e95c22d4a6c24d8fc6644849097c3ab777e19731b40477f8c3a1fe2c40179\", \"kind\": \"single_token\", \"request\": {\"model\": \"m1\", \"system\": \"Answer Y or N.\", \"user\": \"Text: Red kite été {abstract}\\nColour: Blue\\nY or N:\", \"seed\": 7, \"temperature\": 0.0, \"max_tokens\": 300, \"top_logprobs\": 0, \"extra_body\": {\"logprobs\": false}}, \"response\": {\"id\": \"chatcmpl-fixture\", \"object\": \"chat.completion\", \"created\": 1767225600, \"model\": \"m1-served\", \"system_fingerprint\": \"fp-x\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"N\"}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 22, \"completion_tokens\": 40, \"total_tokens\": 62}}}"
+ },
+ {
+  "case": "letter_text_thinking",
+  "fields": {
+   "model": "m1",
+   "system": "Answer Y or N.",
+   "user": "Text: Red kite été {abstract}\nColour: Blue\nY or N:",
+   "seed": 7,
+   "temperature": 0.0,
+   "max_tokens": 300,
+   "top_logprobs": 0,
+   "extra_body": {
+    "chat_template_kwargs": {
+     "enable_thinking": true
+    },
+    "logprobs": false
+   }
+  },
+  "key": "0e183cc2408fb0d1da935814c3d6cf0acb71299afad8c8417be109656abd9bfd",
+  "repeat_2_key": "88c7c22f1f0892d620ee579f114c91e6392865baa14032c54bb1a1374216c6e2",
+  "payload": {
+   "model": "m1",
+   "messages": [
+    {
+     "role": "system",
+     "content": "Answer Y or N."
+    },
+    {
+     "role": "user",
+     "content": "Text: Red kite été {abstract}\nColour: Blue\nY or N:"
+    }
+   ],
+   "temperature": 0.0,
+   "max_tokens": 300,
+   "seed": 7,
+   "logprobs": false,
+   "top_logprobs": 0,
+   "chat_template_kwargs": {
+    "enable_thinking": true
+   }
+  },
+  "body": {
+   "id": "chatcmpl-fixture",
+   "object": "chat.completion",
+   "created": 1767225600,
+   "model": "m1-served",
+   "system_fingerprint": "fp-x",
+   "choices": [
+    {
+     "index": 0,
+     "message": {
+      "role": "assistant",
+      "content": "Y"
+     },
+     "finish_reason": "stop"
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 22,
+    "completion_tokens": 250,
+    "total_tokens": 272
+   }
+  },
+  "file_text": "{\"cache_key\": \"0e183cc2408fb0d1da935814c3d6cf0acb71299afad8c8417be109656abd9bfd\", \"kind\": \"single_token\", \"request\": {\"model\": \"m1\", \"system\": \"Answer Y or N.\", \"user\": \"Text: Red kite été {abstract}\\nColour: Blue\\nY or N:\", \"seed\": 7, \"temperature\": 0.0, \"max_tokens\": 300, \"top_logprobs\": 0, \"extra_body\": {\"chat_template_kwargs\": {\"enable_thinking\": true}, \"logprobs\": false}}, \"response\": {\"id\": \"chatcmpl-fixture\", \"object\": \"chat.completion\", \"created\": 1767225600, \"model\": \"m1-served\", \"system_fingerprint\": \"fp-x\", \"choices\": [{\"index\": 0, \"message\": {\"role\": \"assistant\", \"content\": \"Y\"}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 22, \"completion_tokens\": 250, \"total_tokens\": 272}}}"
+ }
+]

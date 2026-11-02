@@ -1,0 +1,47 @@
+{
+ "question": "protocol_v1/sdg_pass1",
+ "cases": [
+  {
+   "texts": {
+    "title": "Juniper ledger: a {abstract} record of {0} fishing quotas",
+    "abstract": "A permissioned blockchain records the catch quotas of two coastal cooperatives. Each entry costs 0.3 µ€ and the café owners kept using it."
+   },
+   "units": [],
+   "null_text": "",
+   "calls": [
+    [
+     "You read scientific abstracts and identify which United Nations Sustainable Development Goals they relate to.\n\nThis is a screening step. A later step checks each answer in detail, so a goal you score too high costs little and a goal you score too low is lost for good. Be inclusive: score a goal above zero whenever it could plausibly be relevant, even weakly, even when the connection is indirect or the abstract only touches the topic in passing. Do not restrict yourself to the goals the authors mention by name.\n\nAnswer with JSON only.",
+     "Title: Juniper ledger: a {abstract} record of {0} fishing quotas\n\nAbstract: A permissioned blockchain records the catch quotas of two coastal cooperatives. Each entry costs 0.3 µ€ and the café owners kept using it.\n\nScore how plausibly this abstract relates to each of the seventeen goals, from 0 to 100. Use 0 for no conceivable relevance, 100 for a goal the abstract is squarely about, and the range in between for everything else. Score every goal.\n\nSDG1 No Poverty\nSDG2 Zero Hunger\nSDG3 Good Health and Well-being\nSDG4 Quality Education\nSDG5 Gender Equality\nSDG6 Clean Water and Sanitation\nSDG7 Affordable and Clean Energy\nSDG8 Decent Work and Economic Growth\nSDG9 Industry, Innovation and Infrastructure\nSDG10 Reduced Inequalities\nSDG11 Sustainable Cities and Communities\nSDG12 Responsible Consumption and Production\nSDG13 Climate Action\nSDG14 Life Below Water\nSDG15 Life on Land\nSDG16 Peace, Justice and Strong Institutions\nSDG17 Partnerships for the Goals\n\nReturn JSON of the form {\"SDG1\": 0, \"SDG2\": 40, \"SDG3\": 0} and so on, with all seventeen keys present."
+    ]
+   ]
+  },
+  {
+   "texts": {
+    "title": "Quokka seminar notes",
+    "abstract": null
+   },
+   "units": [],
+   "null_text": "",
+   "calls": [
+    [
+     "You read scientific abstracts and identify which United Nations Sustainable Development Goals they relate to.\n\nThis is a screening step. A later step checks each answer in detail, so a goal you score too high costs little and a goal you score too low is lost for good. Be inclusive: score a goal above zero whenever it could plausibly be relevant, even weakly, even when the connection is indirect or the abstract only touches the topic in passing. Do not restrict yourself to the goals the authors mention by name.\n\nAnswer with JSON only.",
+     "Title: Quokka seminar notes\n\nAbstract: \n\nScore how plausibly this abstract relates to each of the seventeen goals, from 0 to 100. Use 0 for no conceivable relevance, 100 for a goal the abstract is squarely about, and the range in between for everything else. Score every goal.\n\nSDG1 No Poverty\nSDG2 Zero Hunger\nSDG3 Good Health and Well-being\nSDG4 Quality Education\nSDG5 Gender Equality\nSDG6 Clean Water and Sanitation\nSDG7 Affordable and Clean Energy\nSDG8 Decent Work and Economic Growth\nSDG9 Industry, Innovation and Infrastructure\nSDG10 Reduced Inequalities\nSDG11 Sustainable Cities and Communities\nSDG12 Responsible Consumption and Production\nSDG13 Climate Action\nSDG14 Life Below Water\nSDG15 Life on Land\nSDG16 Peace, Justice and Strong Institutions\nSDG17 Partnerships for the Goals\n\nReturn JSON of the form {\"SDG1\": 0, \"SDG2\": 40, \"SDG3\": 0} and so on, with all seventeen keys present."
+    ]
+   ]
+  },
+  {
+   "texts": {
+    "title": "<title>",
+    "abstract": "<abstract>"
+   },
+   "units": [],
+   "null_text": "",
+   "calls": [
+    [
+     "You read scientific abstracts and identify which United Nations Sustainable Development Goals they relate to.\n\nThis is a screening step. A later step checks each answer in detail, so a goal you score too high costs little and a goal you score too low is lost for good. Be inclusive: score a goal above zero whenever it could plausibly be relevant, even weakly, even when the connection is indirect or the abstract only touches the topic in passing. Do not restrict yourself to the goals the authors mention by name.\n\nAnswer with JSON only.",
+     "Title: <title>\n\nAbstract: <abstract>\n\nScore how plausibly this abstract relates to each of the seventeen goals, from 0 to 100. Use 0 for no conceivable relevance, 100 for a goal the abstract is squarely about, and the range in between for everything else. Score every goal.\n\nSDG1 No Poverty\nSDG2 Zero Hunger\nSDG3 Good Health and Well-being\nSDG4 Quality Education\nSDG5 Gender Equality\nSDG6 Clean Water and Sanitation\nSDG7 Affordable and Clean Energy\nSDG8 Decent Work and Economic Growth\nSDG9 Industry, Innovation and Infrastructure\nSDG10 Reduced Inequalities\nSDG11 Sustainable Cities and Communities\nSDG12 Responsible Consumption and Production\nSDG13 Climate Action\nSDG14 Life Below Water\nSDG15 Life on Land\nSDG16 Peace, Justice and Strong Institutions\nSDG17 Partnerships for the Goals\n\nReturn JSON of the form {\"SDG1\": 0, \"SDG2\": 40, \"SDG3\": 0} and so on, with all seventeen keys present."
+    ]
+   ]
+  }
+ ]
+}

@@ -1,0 +1,24 @@
+{
+ "columns": [
+  "id",
+  "title",
+  "abstract"
+ ],
+ "rows": [
+  [
+   "w-003",
+   "Kestrel study: solar microgrids that power rural clinics",
+   "We size a solar microgrid for three rural clinics and forecast their demand with a small neural network. Outages fell by half over one year."
+  ],
+  [
+   "w-001",
+   "Juniper ledger: a {abstract} record of {0} fishing quotas",
+   "A permissioned blockchain records the catch quotas of two coastal cooperatives. Each entry costs 0.3 µ€ and the café owners kept using it."
+  ],
+  [
+   "w-002",
+   "Quokka seminar notes",
+   null
+  ]
+ ]
+}
