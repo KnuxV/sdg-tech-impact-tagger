@@ -1,0 +1,53 @@
+{
+  "upload_type": "software",
+  "title": "sdg-tech-impact-tagger: labelling texts with SDGs, digital technologies and their impact through LLMs, by versioned questions",
+  "version": "0.1.0",
+  "description": "<p>A Python package that labels texts with an LLM behind any OpenAI-compatible endpoint: the UN Sustainable Development Goals, advanced digital technologies, the impact of a technology on a goal, or any list of labels a user writes. Questions are versioned prompt blocks identified by a hash and read by one of four readouts (scores in a JSON schema, a letter with its probabilities, a letter written as text, a JSON object with several fields per label); they are chained by unit rules in a declarative TOML workflow. Every call is cached with its raw answer, every row records the model the endpoint reports, and a run can be replayed from its cache without the network. The package ships the questions and workflows of earlier research runs and rebuilds their tables row for row from their caches. The goal and target texts are those of the United Nations, and the target lists of the impact questions come from the Aurora SDG queries v5.0: see CREDITS.md.</p>",
+  "creators": [
+    {
+      "name": "Michoud, Kevin",
+      "affiliation": "University of Strasbourg",
+      "orcid": "0009-0002-5245-6088"
+    }
+  ],
+  "license": "GPL-3.0-only",
+  "access_right": "open",
+  "keywords": [
+    "sustainable development goals",
+    "SDG",
+    "digital technologies",
+    "LLM",
+    "annotation",
+    "text labelling",
+    "reproducibility",
+    "bibliometrics"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.23885812",
+      "relation": "references",
+      "scheme": "doi",
+      "resource_type": "software"
+    },
+    {
+      "identifier": "10.5281/zenodo.3817445",
+      "relation": "isDerivedFrom",
+      "scheme": "doi",
+      "resource_type": "dataset"
+    },
+    {
+      "identifier": "https://undocs.org/A/RES/70/1",
+      "relation": "isDerivedFrom",
+      "scheme": "url",
+      "resource_type": "publication-other"
+    },
+    {
+      "identifier": "https://unstats.un.org/sdgapi",
+      "relation": "isDerivedFrom",
+      "scheme": "url",
+      "resource_type": "dataset"
+    }
+  ],
+  "notes": "Code under GPL-3.0-only. The questions and lists shipped in the package under CC BY 4.0, except the text they quote, which keeps its source's terms: the official titles and targets of the Sustainable Development Goals (United Nations) and the target lists exported from the Aurora SDG queries v5.0 (CC BY 4.0). See LICENSE-DATA.md and CREDITS.md.",
+  "language": "eng"
+}

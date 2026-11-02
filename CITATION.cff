@@ -1,0 +1,87 @@
+cff-version: 1.2.0
+message: "If you use this package, please cite it, and cite the sources of the text its questions quote (listed under references and in CREDITS.md)."
+title: "sdg-tech-impact-tagger: labelling texts with SDGs, digital technologies and their impact through LLMs, by versioned questions"
+type: software
+version: "0.1.0"
+license: GPL-3.0-only
+repository-code: "https://github.com/KnuxV/sdg-tech-impact-tagger"
+url: "https://github.com/KnuxV/sdg-tech-impact-tagger"
+abstract: >-
+  A Python package that labels texts with an LLM behind any OpenAI-compatible
+  endpoint: the UN Sustainable Development Goals, advanced digital
+  technologies, the impact of a technology on a goal, or any list of labels
+  a user writes. Questions are versioned prompt blocks identified by a hash
+  and read by one of four readouts; they are chained by unit rules in a
+  declarative TOML workflow. Every call is cached with its raw answer, every
+  row records the model the endpoint reports, and a run can be replayed from
+  its cache without the network. The package ships the questions and
+  workflows of earlier research runs and rebuilds their tables row for row
+  from their caches.
+keywords:
+  - sustainable development goals
+  - SDG
+  - digital technologies
+  - LLM
+  - annotation
+  - text labelling
+  - reproducibility
+  - bibliometrics
+authors:
+  - family-names: Michoud
+    given-names: Kevin
+    email: kmichoud@unistra.fr
+    orcid: "https://orcid.org/0009-0002-5245-6088"
+    affiliation: "University of Strasbourg"
+references:
+  - type: software
+    title: "sdg-tech-tagger-rs: tagging texts with SDGs and digital technologies by published queries"
+    version: "0.1.0"
+    doi: 10.5281/zenodo.23885812
+    license: GPL-3.0-only
+    repository-code: "https://github.com/KnuxV/sdg-tech-tagger-rs"
+    authors:
+      - family-names: Michoud
+        given-names: Kevin
+        orcid: "https://orcid.org/0009-0002-5245-6088"
+        affiliation: "University of Strasbourg"
+    notes: "Companion package: tags the same goals and technologies by published keyword queries, with no LLM."
+  - type: data
+    title: "Search Queries for \"Mapping Research Output to the Sustainable Development Goals (SDGs)\" v5.0"
+    version: "5.0"
+    date-released: "2020-07-02"
+    license: CC-BY-4.0
+    doi: 10.5281/zenodo.3817445
+    url: "https://github.com/Aurora-Network-Global/sdg-queries/releases/tag/v5.0"
+    authors:
+      - family-names: Vanderfeesten
+        given-names: Maurice
+        orcid: "https://orcid.org/0000-0002-5119-3514"
+        affiliation: "Vrije Universiteit Amsterdam"
+      - family-names: Otten
+        given-names: René
+        orcid: "https://orcid.org/0000-0002-6485-8810"
+        affiliation: "Vrije Universiteit Amsterdam"
+      - family-names: Spielberg
+        given-names: Eike
+        orcid: "https://orcid.org/0000-0002-3333-5814"
+        affiliation: "University of Duisburg-Essen"
+    publisher:
+      name: "Aurora Universities Network"
+    notes: "Source of the target lists the impact questions show for each goal."
+  - type: generic
+    title: "Transforming our world: the 2030 Agenda for Sustainable Development"
+    authors:
+      - name: "United Nations General Assembly"
+    year: 2015
+    date-released: "2015-10-21"
+    identifiers:
+      - type: other
+        value: "A/RES/70/1"
+    url: "https://undocs.org/A/RES/70/1"
+    notes: "Official titles and targets of the Sustainable Development Goals, quoted in the shipped questions and lists."
+  - type: database
+    title: "SDG Global Database API: the global indicator framework for the Sustainable Development Goals"
+    authors:
+      - name: "United Nations Statistics Division"
+    url: "https://unstats.un.org/sdgapi"
+    notes: "Source from which the goal and target texts were served."
