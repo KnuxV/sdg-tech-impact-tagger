@@ -11,8 +11,6 @@ The companion package [sdg-tech-tagger-rs](https://github.com/KnuxV/sdg-tech-tag
 
 ## Install
 
-From PyPI, with Python 3.13 or later. The package is pure Python (it depends on httpx, Polars and Pydantic), so it installs on any platform.
-
 ```bash
 pip install sdg-tech-impact-tagger     # or: uv add sdg-tech-impact-tagger
 ```
@@ -22,7 +20,7 @@ It imports as `sdg_tech_impact_tagger` and installs the command `sdg-tech-impact
 ```bash
 git clone https://github.com/KnuxV/sdg-tech-impact-tagger
 cd sdg-tech-impact-tagger
-uv sync            # or: pip install .
+uv sync 
 ```
 
 ## Quick start
@@ -410,4 +408,4 @@ Not replayed:
 
 ## How AI was used
 
-<!-- Kevin writes this section. -->
+All the code was written by Claude Code (across many months). Prompts were also written by Code but heavily read, supervised and tested by me.
