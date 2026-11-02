@@ -155,3 +155,12 @@ rule consistent with the earlier code. Three answers correct the paper-v1
 preset to what `wos_paper_sample` ran: `coder` sends no thinking flag
 (style `omit`), the `length` budget rule applies to the three paper passes,
 and no preset names a texts file. No answer changes an earlier table.
+
+## D020  The implementer's choices where the contract is silent (2026-11-02)
+
+Accepted as journalled by the implementation session: a block name found in
+two files of one question, an unknown `[readout]` key, a source pass with
+`repeats > 1`, a `passes` or `models` restriction naming an unknown name,
+and a `limit` below 1 are refused; extra keys in a `json_object` item are
+ignored; flags from a file are taken only at level `work x list x list`.
+None changes what a pass returns.

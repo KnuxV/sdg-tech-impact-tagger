@@ -283,3 +283,17 @@ package fault; a replay cannot reproduce two answers stored under one
 key.
 Tests added: none.
 Open / unsure: none.
+
+## 2026-11-02 23:30  Release preparation
+Done: D020 records the implementer's choices. Files are written with LF on
+every platform (cache, run.json, manifest, calls); the command test finds
+`.exe` on Windows; uv_build pinned to 0.13. README reports the replay of all
+three earlier repositories: 25 tables, 22 identical, 3 differing on 2 rows
+each in tokens_out only, from two works whose identical requests share one
+cache key.
+Tests added: none.
+Open / unsure: `prompt` cannot render a question over a list of the user's
+own, and a new question's id is read from `check`'s refusal; both for 0.1.1.
+The 5-word overlap check of the three examples P3.1 added to the impact
+question was not run. Kevin creates the GitHub repository, writes the "How
+AI was used" section, and sets up PyPI and Zenodo.
