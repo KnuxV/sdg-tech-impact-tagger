@@ -34,7 +34,12 @@ from conftest import (
 
 import sdg_tech_impact_tagger as tagger
 
-COMMAND = Path(sys.executable).parent / "sdg-tech-impact-tagger"
+# pip installs the command beside the interpreter, with `.exe` on Windows.
+COMMAND = Path(sys.executable).parent / (
+    "sdg-tech-impact-tagger.exe"
+    if sys.platform == "win32"
+    else "sdg-tech-impact-tagger"
+)
 GOOD = '{"RED": 10, "GREEN": 20, "BLUE": 30}'
 
 
