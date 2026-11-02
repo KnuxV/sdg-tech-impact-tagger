@@ -1,0 +1,89 @@
+[run]
+name = "protocol-v1-impact"
+cache_dir = "cache"
+
+[models.qwen3]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "qwen3"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[models.gemma]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "gemma"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[models.coder]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "coder"
+seed = 42
+temperature = 0.0
+reasoning = "on"
+reasoning_style = "omit"
+timeout_s = 900.0
+concurrency = 8
+
+[models.gemma_thinking]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "gemma"
+seed = 42
+temperature = 0.0
+reasoning = "on"
+reasoning_style = "enable_thinking"
+timeout_s = 900.0
+concurrency = 8
+
+[[passes]]
+id = "sdg_pass1"
+question = "protocol_v1/sdg_pass1"
+models = ["qwen3", "gemma"]
+units = { rule = "all" }
+
+[[passes]]
+id = "sdg_pass2"
+question = "protocol_v1/sdg_pass2"
+models = ["qwen3", "gemma"]
+units = { rule = "threshold", from = "sdg_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
+
+[[passes]]
+id = "adt_pass1"
+question = "protocol_v1/adt_pass1"
+models = ["gemma", "qwen3"]
+units = { rule = "all" }
+
+[[passes]]
+id = "adt_pass2"
+question = "protocol_v1/adt_pass2"
+models = ["gemma", "qwen3"]
+units = { rule = "threshold", from = "adt_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
+
+[[passes]]
+id = "impact"
+question = "impact/p3_2"
+models = ["coder", "gemma_thinking"]
+attempts = 4
+budget_rule = "tokens"             # as the impact pass of [WS] asked again
+units = { rule = "cross", agreed_first = true, a = { from = "adt_pass2", models = ["gemma", "qwen3"], positive = ["E", "A", "T", "M"], combine = "union" }, b = { from = "sdg_pass2", models = ["gemma", "qwen3"], positive = ["Y"], combine = "union" } }
+
+[passes.budgets.coder]
+max_tokens = 6000
+retry_max_tokens = 20000
+
+[passes.budgets.gemma_thinking]
+max_tokens = 4000
+retry_max_tokens = 12000

@@ -1,0 +1,51 @@
+[run]
+name = "protocol-v1"
+cache_dir = "cache"
+
+[models.qwen3]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "qwen3"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[models.gemma]
+endpoint = "https://conversation.ia.unistra.fr/api"
+api_key_env = "UNISTRA_API_KEY"
+model = "gemma"
+seed = 42
+temperature = 0.0
+reasoning = "off"
+reasoning_style = "omit"
+timeout_s = 180.0
+concurrency = 6
+
+[[passes]]
+id = "sdg_pass1"
+question = "protocol_v1/sdg_pass1"
+models = ["qwen3"]
+units = { rule = "all" }
+
+[[passes]]
+id = "sdg_pass2"
+question = "protocol_v1/sdg_pass2"
+models = ["qwen3"]
+units = { rule = "threshold", from = "sdg_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
+
+[[passes]]
+id = "adt_pass1"
+question = "protocol_v1/adt_pass1"
+models = ["gemma"]
+units = { rule = "all" }
+
+[[passes]]
+id = "adt_pass2"
+question = "protocol_v1/adt_pass2"
+models = ["gemma"]
+units = { rule = "threshold", from = "adt_pass1", model = "same", at_least = 0.25 }
+chunk_size = 2000
