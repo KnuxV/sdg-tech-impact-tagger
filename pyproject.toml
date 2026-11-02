@@ -1,6 +1,6 @@
 [project]
 name = "sdg-tech-impact-tagger"
-version = "0.1.0"
+version = "0.1.1"
 description = "Label texts with sustainable development goals, digital technologies, their impact or any list of labels, through any OpenAI-compatible LLM endpoint, by versioned questions and declarative workflows."
 readme = "README.md"
 authors = [

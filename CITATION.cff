@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use this package, please cite it, and cite the sources of the text its questions quote (listed under references and in CREDITS.md)."
 title: "sdg-tech-impact-tagger: labelling texts with SDGs, digital technologies and their impact through LLMs, by versioned questions"
 type: software
-version: "0.1.0"
+version: "0.1.1"
 doi: 10.5281/zenodo.23897908
 license: GPL-3.0-only
 repository-code: "https://github.com/KnuxV/sdg-tech-impact-tagger"
