@@ -124,3 +124,25 @@ keys, with questions in their own files. TOML rather than YAML because YAML
 1.1 reads unquoted `yes` and `no` as booleans. Passes are chained by a closed
 set of unit rules implemented in Python (`all`, `threshold`, `cross`,
 `file`), never by expressions written in the file.
+
+## D016  The contract's own choices (2026-11-02)
+
+`docs/contract.md` section 12 lists 54 choices the contract makes beyond
+D001 to D015, each with its alternative. They are accepted as written,
+except 49 and 53, settled by D017 and D018. None changes what an earlier
+run returns; replay settings (`spelling`, `budget_rule`, `null_text`,
+`prompt_prefix`) exist so that the earlier tables can be rebuilt.
+
+## D017  The reasoning layer of divergence-validation ships (2026-11-02, Kevin)
+
+`impact/p2_reasoning` ships beside `impact/p2`: the same blocks, read by
+`letter_text`, prefix `p3`, so the reasoning-layer tables of
+`divergence-validation` replay. Its `gpt-oss` rows of the single-token
+layer, a letter's logprob read after reasoning, are not reproducible: D006
+stays as written.
+
+## D018  Preset models (2026-11-02, Kevin)
+
+`protocol-v1` uses the models as frozen: qwen3 for SDG, gemma for ADT.
+`protocol-v1-impact` runs both models on every protocol pass, then P3.2, as
+in `wos_paper_sample`.
