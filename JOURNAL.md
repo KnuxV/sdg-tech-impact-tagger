@@ -307,3 +307,12 @@ Linux and macOS pass exactly. Kevin chose to stop testing on Windows (D021);
 Tests added: none.
 Open / unsure: GitHub credits no commit to Kevin until `kmichoud@unistra.fr`
 is verified on his account.
+
+## 2026-11-02 22:00  DOI of the first release
+Done: v0.1.0 is on Zenodo: concept DOI 10.5281/zenodo.23897908, version DOI
+10.5281/zenodo.23897909. The README badge and `CITATION.cff` carry the concept
+DOI; the README citation gives both. `.zenodo.json` is left without the
+package's own DOI, which Zenodo assigns. `CITATION.cff` validates with
+cffconvert.
+Tests added: none.
+Open / unsure: none new.
