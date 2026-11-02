@@ -243,3 +243,43 @@ matter there.
 Tests added: none.
 Open / unsure: the divergence-validation replay waits on its caches
 being copied to this machine.
+
+## 2026-11-02 20:02  Replay of divergence-validation from its caches
+Done: replayed labels_p2 and labels_p3 of divergence-validation from
+data/cache/llm_p2 and llm_p3 (now on disk), read in place. Texts: the
+20,823 works of pairs.parquet, one row each, first-seen order, no null
+title or abstract (null_text "None" set, unused). Units: a file rule of
+the 25,522 (id, adt, sdg) triples, codes mapped to the package's (8.3).
+impact/p2 with spelling "exact", max_tokens 1, top_logprobs 20, models
+gemma and mistral-small, reasoning off. impact/p2_reasoning with
+budget_rule "tokens" and budgets coder 6000/20000, gemma (thinking)
+4000/12000, gpt-oss (reasoning_effort medium) 6000/20000. The 200-work
+slice was identical, then the full run. Rows unpivoted per side and
+compared on (id, adt, sdg, dimension): source, model, prompt_id,
+sample_id, temperature, label, p_yes (null in labels_p3), conf, tokens,
+batch_id (p3-<model>-retry where the side was retried).
+
+| table | earlier rows | replayed | identical | differing | misses |
+|---|---|---|---|---|---|
+| labels_p2 gemma | 51,044 | 51,044 | 51,044 | 0 | 0 |
+| labels_p2 mistral-small | 51,044 | 51,044 | 51,044 | 0 | 0 |
+| labels_p3 coder | 51,044 | 51,044 | 51,042 | 2 (tokens_out) | 0 |
+| labels_p3 gemma | 51,044 | 51,044 | 51,042 | 2 (tokens_out) | 0 |
+| labels_p3 gpt-oss | 51,044 | 51,044 | 51,042 | 2 (tokens_out) | 0 |
+
+labels_p2 gpt-oss: 51,044 rows, not replayable (D017), not run.
+No key on one side only, no cache miss (fresh_calls 0). Budget retries
+read from the cache: 702 calls coder, 18 gemma, 0 gpt-oss.
+Cause of the 6 differing rows, in the earlier run, not the package: two
+works of pairs.parquet carry the same title and abstract and the same
+(IOT, SDG7) pair, so their pos and their neg requests share a cache key.
+The earlier client (llm/client.py run_batch) sent each request in its
+own thread with no deduplication, so both were asked at once, each row
+kept its own answer, and the cache file (written by os.replace) kept
+the last. The replay reads that one answer for both rows. Labels agree;
+only tokens_out differs, on one row per (model, side) pair. The replayed
+value equals the other work's earlier value in every case. Not a
+package fault; a replay cannot reproduce two answers stored under one
+key.
+Tests added: none.
+Open / unsure: none.
