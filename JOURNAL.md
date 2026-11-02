@@ -297,3 +297,13 @@ own, and a new question's id is read from `check`'s refusal; both for 0.1.1.
 The 5-word overlap check of the three examples P3.1 added to the impact
 question was not run. Kevin creates the GitHub repository, writes the "How
 AI was used" section, and sets up PyPI and Zenodo.
+
+## 2026-11-02 21:40  Windows out of the test matrix
+Done: the first CI run on GitHub failed on Windows only: three replay tests
+(`adt_pass2` qwen3 and gemma, the impact preset through the command) differ
+in `p_n` in the last binary digit, from `math.exp` of the Windows C library.
+Linux and macOS pass exactly. Kevin chose to stop testing on Windows (D021);
+`release.yml` tests on Ubuntu and macOS.
+Tests added: none.
+Open / unsure: GitHub credits no commit to Kevin until `kmichoud@unistra.fr`
+is verified on his account.
