@@ -29,6 +29,7 @@ classifiers = [
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Topic :: Text Processing :: Linguistic",
 ]
@@ -42,7 +43,7 @@ Repository = "https://github.com/KnuxV/sdg-tech-impact-tagger"
 Issues = "https://github.com/KnuxV/sdg-tech-impact-tagger/issues"
 
 [build-system]
-requires = ["uv_build>=0.9.0,<0.10"]
+requires = ["uv_build>=0.13.0,<0.14"]
 build-backend = "uv_build"
 
 [dependency-groups]
