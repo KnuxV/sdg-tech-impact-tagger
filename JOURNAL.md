@@ -316,3 +316,15 @@ package's own DOI, which Zenodo assigns. `CITATION.cff` validates with
 cffconvert.
 Tests added: none.
 Open / unsure: none new.
+
+## 2026-11-02 22:20  v0.1.0 missed PyPI; 0.1.1
+Done: the publish job of release v0.1.0 failed at the attestation: with one
+artifact, download-artifact v7 extracts into the workspace, not under
+`wheels-dist/`, so `wheels-*/*` matched nothing. Nothing reached PyPI; Zenodo
+archived v0.1.0. The jobs now download into `dist/` (c80feb5). Kevin chose to
+release 0.1.1 (same code) rather than publish v0.1.0 by hand; pyproject,
+uv.lock, CITATION.cff and .zenodo.json say 0.1.1. 616 tests pass; the wheel
+builds as `sdg_tech_impact_tagger-0.1.1`.
+Tests added: none.
+Open / unsure: PyPI starts at 0.1.1 while Zenodo has 0.1.0 and, once
+released, 0.1.1 under the same concept DOI.
